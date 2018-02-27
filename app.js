@@ -1,4 +1,5 @@
 import { e, register, override, getHandle} from 'ele-mint'
+let section = register('section'),
   button = register('button'),
   div = register('div'),
   h1 = register('h1'),
