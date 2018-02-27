@@ -14,9 +14,9 @@ let section = register('section'),
   pre = register('pre'),
   code = register('code'),
   style = register('style'),
-  fSection = getSection(),
-  virtual = getVirtual(),
-  eventual = overrideEvent(),
+  fSection = getSectionComponent(),
+  virtual = getVirtualComponent(),
+  eventual = getOverrideEventCompoent(),
   showingContent = true
 
 addStyles()
@@ -83,7 +83,7 @@ function removeParent() {
   console.log([childExists, 'after parent removal', childStillExists].join(', '))
 }
 
-function getSection() {
+function getSectionComponent() {
 
   let customRegister = override({
     setAttribute: (el, name, val) => {
@@ -111,6 +111,7 @@ function getSection() {
    */
   return register('f-section', {
     processRender: (elementParent, def) => {
+      // using symbol for uniqueness here to track instances.
       let handle = Symbol('fun-section-h3')
       let count = 0;
       return section(
@@ -128,7 +129,7 @@ function getSection() {
   })
 }
 
-function getVirtual() {
+function getVirtualComponent() {
   return register('virtual', {
     processRender: (elementParent, def) => {
       console.log(def.attr)
@@ -138,7 +139,7 @@ function getVirtual() {
   })
 }
 
-function overrideEvent() {
+function getOverrideEventCompoent() {
   return register('div', {
     addEventListener: (elem, eventName, handler) => {
       // just for fun completely ignoring input event and doing our own thing
@@ -158,11 +159,11 @@ function showTheCode(elem, showingContent) {
     }
     let theCodes = div({':id': 'code'},
       [{title: 'DOM building function', func: init},
-       {title: 'Get Virtual Component:', func: getVirtual},
-       {title: 'Get Section Component:', func: getSection},
-       {title: 'Get EventOverride', func: overrideEvent}
+       {title: 'Get Virtual Component:', func: getVirtualComponent},
+       {title: 'Get Section Component:', func: getSectionComponent},
+       {title: 'Get EventOverride Component', func: getOverrideEventCompoent}
       ].map((i) => {
-        return getVirtual()(
+        return getVirtualComponent()(
           div(i.title),
           pre(code(i.func.toString())),
           hr(),
