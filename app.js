@@ -1,4 +1,4 @@
-import { e, register, getHandle} from 'ele-mint'
+import { e, register, override, getHandle} from 'ele-mint' //'./src/eleMint.js'
 let section = register('section'),
   button = register('button'),
   div = register('div'),
@@ -16,6 +16,7 @@ let section = register('section'),
   style = register('style'),
   fSection = getSection(),
   virtual = getVirtual(),
+  eventual = overrideEvent(),
   showingContent = true
 
 addStyles()
@@ -44,6 +45,10 @@ function init() {
         li('one additional Item'),
         li('second additional item')
       ),
+      hr(),
+      eventual({onbeawesome: (ev) => {
+        alert('But I already am awesome')
+      }}, 'some awesome eventing here'),
       virtual({logThis: 'this is a virtual element created without an element node'},
         div('This element will be added to the dom without the virtual parent, but could be processed by the virtual parent')
       ),
@@ -79,32 +84,67 @@ function removeParent() {
 }
 
 function getSection() {
+
+  let customRegister = override({
+    setAttribute: (el, name, val) => {
+      console.log('set that attribute')
+      el.setAttribute(name, val)
+    },
+    setProp: (el, name, val) => {
+      console.log('set the props')
+      el[name] = val
+    },
+    addEventListener: (el, name, handler) => {
+      console.log('Adding event listener')
+      el.addEventListener(name, (ev) => handler(ev, el))
+    }
+  })
+  let cDiv = customRegister('div')
+  let cH3 = customRegister('h3')
+  let cP = customRegister('p')
+  let cButton = customRegister('button')
+  let cHr = customRegister('hr')
+
   /**
    * 
    * @returns {function({title: string, body: string, footer: string})}
    */
-  return register('f-section', (elementParent, def) => {
-    let handle = Symbol('fun-section-h3')
-    let count = 0;
-    return section(
-      h3({':id': handle},def.attr.title),
-      p(def.attr.body), 
-      div(def.attr.footer),
-      button({onclick: (ev, elem) => {
-          count++;
-          getHandle(handle).elem.textContent = `Clicked: ${count} times`
-          elem.textContent = 'oh, how nice, you clicked me! Again?'
-      }}, 'Click me, Click me!'),
-      hr()
-    ).render(elementParent)
+  return register('f-section', {
+    processRender: (elementParent, def) => {
+      let handle = Symbol('fun-section-h3')
+      let count = 0;
+      return section(
+        cH3({':id': handle},def.attr.title),
+        cP(def.attr.body), 
+        cDiv(def.attr.footer),
+        cButton({onclick: (ev, elem) => {
+            count++;
+            getHandle(handle).elem.textContent = `Clicked: ${count} times`
+            elem.textContent = 'oh, how nice, you clicked me! Again?'
+        }}, 'Click me, Click me!'),
+        cHr()
+      ).render(elementParent)
+    }
   })
 }
 
 function getVirtual() {
-  return register('virtual', (elementParent, def) => {
-    console.log(def.attr)
-    def.children.forEach(child => child.render(elementParent))
-    return elementParent
+  return register('virtual', {
+    processRender: (elementParent, def) => {
+      console.log(def.attr)
+      def.children.forEach(child => child.render(elementParent))
+      return elementParent
+    }
+  })
+}
+
+function overrideEvent() {
+  return register('div', {
+    addEventListener: (elem, eventName, handler) => {
+      // just for fun completely ignoring input event and doing our own thing
+      // basically illustrating overriding a part of the rendering pipeline.
+      elem.addEventListener('click', ev => handler(ev))
+    }
   })
 }
 
@@ -119,7 +159,8 @@ function showTheCode(elem, showingContent) {
     let theCodes = div({':id': 'code'},
       [{title: 'DOM building function', func: init},
        {title: 'Get Virtual Component:', func: getVirtual},
-       {title: 'Get Section Component:', func: getSection}
+       {title: 'Get Section Component:', func: getSection},
+       {title: 'Get EventOverride', func: overrideEvent}
       ].map((i) => {
         return getVirtual()(
           div(i.title),

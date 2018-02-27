@@ -4,30 +4,56 @@ const //ELEMENTS = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|block
 
 const handles = {}
 
-const renderer = function() {}
+const renderPipeline = function() {}
+
+renderPipeline.prototype.attach = function(parentElement, comp) {
+    let el = comp.elem 
+    if (!el) {
+        el = document.createElement(comp.tagName)
+        parentElement.appendChild(el)
+    }
+    return el
+}
+
+renderPipeline.prototype.addEventListener = function(elem, evName, handler) {
+    elem.addEventListener(evName, (ev) => handler(ev, elem))
+}
+
+renderPipeline.prototype.setProp = function (elem, name, value) {
+    elem[name] = value
+}
+
+renderPipeline.prototype.setAttribute = function (elem, name, value) {
+    elem.setAttribute(name, value)
+}
+
+renderPipeline.prototype.setVirtual = function (elem, name, value) {
+}
+
 
 /**
  * Renders the element and children to the DOM
+ * Using a prototype function instead for performance
  * 
  * @param {HTMLElement} parentElement
  * @returns {HTMLElement}
  */
-renderer.prototype.processRender = function defaultRender(parentElement, comp) {
-    let elem = comp.elem 
-    if (!elem) {
-        elem = document.createElement(comp.tagName)
-        parentElement.appendChild(elem)
-    }
+renderPipeline.prototype.processRender = function defaultRender(parentElement, comp) {
+    let elem = this.attach(parentElement, comp)
     Object.keys(comp.attr).forEach((attr) => {
         let name = MAPPED_ATTRIBUTES[attr] || attr
-        if (attr.indexOf('on') === 0) {
-            elem.addEventListener(name.replace('on', ''), (ev) => comp.attr[attr](ev, elem))
+        // is virtual property: 
+        let func = 'setVirtual' 
+        if (attr.slice(0,2) === 'on') {
+            name = name.slice(2)
+            func = 'addEventListener'
         } else if ((DIRECT_SET_ATTRIBUTES.indexOf(attr) > -1) || (typeof comp.attr[attr] === 'boolean')){
-            elem[name] = comp.attr[attr]
+            func = 'setProp'
             // ignoring virtual properties
-        } else if (attr.indexOf(':') !== 0) {
-            elem.setAttribute(attr, comp.attr[attr])
+        } else if (attr.slice(0, 1) !== ':') {
+            func = 'setAttribute'
         }
+        this[func](elem, name, comp.attr[attr])
     })
     comp.renderedChilren = comp.children.map((child) => {
         if (!child.render) { 
@@ -43,10 +69,10 @@ renderer.prototype.processRender = function defaultRender(parentElement, comp) {
  * Returns a function closure for building different html elements.
  * 
  * @param {string} tagName 
- * @param {function(HTMLElement, { tagName: string, children: { render: function() }[], attr: {[x: string]: any} }) } [renderOverride]
+ * @param {any} [overrides] 
  * @returns 
  */
-export function register(tagName, renderOverride) {
+export function register(tagName, overrides) {
     if (!tagName) {
         error('tagName must be defined')
     }
@@ -76,7 +102,7 @@ export function register(tagName, renderOverride) {
             attr: attributes || {},
             render: function(ep) {
                 let handle = comp.attr.id || comp.attr[':id'] || Symbol(this.tagName)
-                this.elem = this.processRender(ep, comp) 
+                this.elem = this.processRender(ep, comp, overrides) 
                 this.remove = () => {
                     // for cleanup of handles to eliminate memory leak
                     comp.renderedChilren.forEach(c => c.remove())
@@ -89,10 +115,22 @@ export function register(tagName, renderOverride) {
                 handles[handle] = comp
                 return this.elem
             }
-        }, (renderOverride) ? {processRender: renderOverride} : renderer.prototype )
+        }, renderPipeline.prototype, overrides)
         return comp
     }
 }
+/**
+ * override function to allow overriding parts of the rendering pipeline, or even the whole rendering
+ * 
+ * @export
+ * @param {any} overrides 
+ * @returns 
+ */
+export function override(overrides) {
+    return function(tagName, secondaryOverride) {
+        return register(tagName, Object.assign(overrides,secondaryOverride))
+    }
+} 
 
 export const e = register
 
