@@ -1,5 +1,4 @@
-import { e, register, override, getHandle} from 'ele-mint' //'./src/eleMint.js'
-let section = register('section'),
+import { e, register, override, getHandle} from 'ele-mint'
   button = register('button'),
   div = register('div'),
   h1 = register('h1'),
