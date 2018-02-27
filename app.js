@@ -86,10 +86,6 @@ function removeParent() {
 function getSectionComponent() {
 
   let customRegister = override({
-    setAttribute: (el, name, val) => {
-      console.log('set that attribute')
-      el.setAttribute(name, val)
-    },
     setProp: (el, name, val) => {
       console.log('set the props')
       el[name] = val
@@ -110,14 +106,14 @@ function getSectionComponent() {
    * @returns {function({title: string, body: string, footer: string})}
    */
   return register('f-section', {
-    processRender: (elementParent, def) => {
+    processRender: function(elementParent) {
       // using symbol for uniqueness here to track instances.
       let handle = Symbol('fun-section-h3')
       let count = 0;
       return section(
-        cH3({':id': handle},def.attr.title),
-        cP(def.attr.body), 
-        cDiv(def.attr.footer),
+        cH3({':id': handle}, this.attr.title),
+        cP(this.attr.body), 
+        cDiv(this.attr.footer),
         cButton({onclick: (ev, elem) => {
             count++;
             getHandle(handle).elem.textContent = `Clicked: ${count} times`
@@ -131,9 +127,10 @@ function getSectionComponent() {
 
 function getVirtualComponent() {
   return register('virtual', {
-    processRender: (elementParent, def) => {
-      console.log(def.attr)
-      def.children.forEach(child => child.render(elementParent))
+    // using a normal function instead of an arrow function to keep the context from the calling function.
+    processRender: function(elementParent) {
+      console.log(this.attr)
+      this.children.forEach(child => child.render(elementParent))
       return elementParent
     }
   })
@@ -144,7 +141,8 @@ function getOverrideEventCompoent() {
     addEventListener: (elem, eventName, handler) => {
       // just for fun completely ignoring input event and doing our own thing
       // basically illustrating overriding a part of the rendering pipeline.
-      elem.addEventListener('click', ev => handler(ev))
+      elem.addEventListener('mousedown', ev => handler(ev))
+      elem.addEventListener('touchstart', ev => handler(ev))
     }
   })
 }
@@ -178,7 +176,7 @@ function showTheCode(elem, showingContent) {
 }
 
 /**
- * It should be noted that this is definitely not the preferred pattern for doing styles, but eleMint allows it to work.  
+ * It should be noted that this is usually not the preferred pattern for doing styles, but eleMint allows it to work.  
  * And we are demoing options and features, not necessarily best practices. 
  * 
  */

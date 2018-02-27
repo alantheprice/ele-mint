@@ -1,18 +1,27 @@
 const //ELEMENTS = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hr|html|i|iframe|img|input|ins|kbd|label|legend|li|link|main|map|mark|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|rtc|ruby|s|samp|script|section|select|slot|small|source|span|strong|style|sub|summary|sup|table|tbody|td|template|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr'.split('|'),
-    DIRECT_SET_ATTRIBUTES = ['textContent', 'innerText', 'innerHTML', 'className', 'value', 'style'],
-    MAPPED_ATTRIBUTES = { class: 'className' }
+    MAPPED_ATTRIBUTES = { class: 'className' },
+    DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|style'.split('|')
+        .reduce((agg, next)=> { agg[next] = 1; return agg }, {})
 
 const handles = {}
 
 const renderPipeline = function() {}
 
-renderPipeline.prototype.attach = function(parentElement, comp) {
-    let el = comp.elem 
-    if (!el) {
-        el = document.createElement(comp.tagName)
-        parentElement.appendChild(el)
+/**
+ * Attaches the element to the Dom.
+ * Could easily be overridden to allow full unit testing
+ * 
+ * @param {HTMLElement} parentElement 
+ * @param {any} comp 
+ * @returns 
+ */
+renderPipeline.prototype.attach = function(parentElement) {
+    let element = this.elem 
+    if (!element) {
+        element = document.createElement(this.tagName)
+        parentElement.appendChild(element)
     }
-    return el
+    return element
 }
 
 renderPipeline.prototype.addEventListener = function(elem, evName, handler) {
@@ -23,11 +32,40 @@ renderPipeline.prototype.setProp = function (elem, name, value) {
     elem[name] = value
 }
 
-renderPipeline.prototype.setAttribute = function (elem, name, value) {
-    elem.setAttribute(name, value)
+/**
+ * Set an attribute on the element
+ * -- Can be overridden.
+ * 
+ * @param {HTMLElement} elem 
+ * @param {string} attr 
+ * @param {any} value 
+ */
+renderPipeline.prototype.setAttribute = function (elem, attr, value) {
+    let name = MAPPED_ATTRIBUTES[attr] || attr
+    // is virtual property: 
+    if (attr.slice(0,2) === 'on') {
+        this.addEventListener(elem, name.slice(2), value)
+    } else if (DIRECT_SET_ATTRIBUTES[name] || (typeof value === 'boolean')){
+        this.setProp(elem, name, value)
+        // ignoring virtual properties
+    } else if (attr.slice(0, 1) === ':') {
+        this.setVirtual(elem, name, value)
+    } else {
+        elem.setAttribute(name, value)
+    }
 }
 
 renderPipeline.prototype.setVirtual = function (elem, name, value) {
+    // can be overridden to allow usage
+}
+
+renderPipeline.prototype.renderChildren = function (parentElement, children) {
+    return children.map((child) => {
+        if (!child.render) { 
+            error("child must have render function") 
+        }
+        return child.render(parentElement)
+    })
 }
 
 
@@ -38,30 +76,13 @@ renderPipeline.prototype.setVirtual = function (elem, name, value) {
  * @param {HTMLElement} parentElement
  * @returns {HTMLElement}
  */
-renderPipeline.prototype.processRender = function defaultRender(parentElement, comp) {
-    let elem = this.attach(parentElement, comp)
-    Object.keys(comp.attr).forEach((attr) => {
-        let name = MAPPED_ATTRIBUTES[attr] || attr
-        // is virtual property: 
-        let func = 'setVirtual' 
-        if (attr.slice(0,2) === 'on') {
-            name = name.slice(2)
-            func = 'addEventListener'
-        } else if ((DIRECT_SET_ATTRIBUTES.indexOf(attr) > -1) || (typeof comp.attr[attr] === 'boolean')){
-            func = 'setProp'
-            // ignoring virtual properties
-        } else if (attr.slice(0, 1) !== ':') {
-            func = 'setAttribute'
-        }
-        this[func](elem, name, comp.attr[attr])
+renderPipeline.prototype.processRender = function defaultRender(parentElement) {//, componentDefinition) {
+    let elem = this.attach(parentElement, this)
+    this.elem = elem
+    Object.keys(this.attr).forEach((attr) => {
+        this.setAttribute(elem, attr, this.attr[attr])
     })
-    comp.renderedChilren = comp.children.map((child) => {
-        if (!child.render) { 
-            error("child must have render function") 
-        }
-        return child.render(elem)
-    })
-    comp.elem = elem
+    this.renderedChilren = this.renderChildren(elem, this.children)
     return elem
 }
 
@@ -95,28 +116,28 @@ export function register(tagName, overrides) {
             attributes.textContent = children[0]
             children = children.slice(1)
         }
-        const comp = Object.assign({
+        return Object.assign({
             tagName: tagName,
             // flatten if children were passed in as arrays.
             children: [].concat.apply([], children),
             attr: attributes || {},
             render: function(ep) {
-                let handle = comp.attr.id || comp.attr[':id'] || Symbol(this.tagName)
-                this.elem = this.processRender(ep, comp, overrides) 
-                this.remove = () => {
+                let c = this
+                let handle = c.attr.id || c.attr[':id'] || Symbol(c.tagName)
+                c.elem = c.processRender(ep) 
+                c.remove = () => {
                     // for cleanup of handles to eliminate memory leak
-                    comp.renderedChilren.forEach(c => c.remove())
+                    c.renderedChilren.forEach(c => c.remove())
                     handles[handle] = null
-                    if (ep && ep !== this.elem) {
-                        ep.removeChild(this.elem)
+                    if (ep && ep !== c.elem) {
+                        ep.removeChild(c.elem)
                     }
                 }
-                this.elem.remove = this.remove
-                handles[handle] = comp
-                return this.elem
+                c.elem.remove = c.remove
+                handles[handle] = c
+                return c.elem
             }
         }, renderPipeline.prototype, overrides)
-        return comp
     }
 }
 /**
