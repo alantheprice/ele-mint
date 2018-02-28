@@ -6,7 +6,9 @@
 2. Keep it light -- just over 2 kilobytes minified(not gziped) with module support.
   * Because a key goal is keeping it small, the project does not include a few niceties like predefining all existing html elements.  It is simple to do, and will be added to example usages in the future as the documentation and examples become more robust.
 
-Lets see some examples: 
+[Live Demo](https://alantheprice.github.io/ele-mint/)
+
+Lets see some examples:  
 
 #### Simple Usage for defining element
 ```javascript
