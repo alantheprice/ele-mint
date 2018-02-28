@@ -3,7 +3,7 @@
 ### Ele-Mint has 2 simple goals: 
 #### 1. *Make it simple to build the dom in javascript.*
  * To support that main goal, The sytax closely mirrors HTML, but doesn't involve any string parsing. Building the dom is simply calling functions.
-#### 2. Keep it light -- just over 2 kilobytes minified(not gziped) with module support.
+#### 2. Keep it light -- just over 2 kilobytes minified(not gzipped) with module support.
   * Because a key goal is keeping it small, the project does not include a few niceties like predefining all existing html elements.  It is simple to do, and will be added to example usages in the future as the documentation and examples become more robust.
 
 [Live Demo](https://alantheprice.github.io/ele-mint/)
