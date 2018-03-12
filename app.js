@@ -16,15 +16,15 @@ let section = register('section'),
   style = register('style'),
   fSection = getSectionComponent(),
   virtual = getVirtualComponent(),
-  eventual = getOverrideEventCompoent(),
+  eventual = getOverrideEventComponent(),
   showingContent = true
 
 addStyles()
 init()
 
 function init() {
-  div({class: 'container', ':id': 'parent'},
-    div({':id': 'pageContent'},
+  div({class: 'container', v_id: 'parent'},
+    div({v_id: 'pageContent'},
       h1('Pitifully styled page'),
       h2('Do go to the store'),
       h3('Do not pass go'),
@@ -33,10 +33,10 @@ function init() {
           placeholder: 'something', 
           oninput: (ev, elem) => getHandle('head').elem.textContent = elem.value
       }),
-      h4({':id': 'head'}, 'Do update this text with the ^ input'),
-      div({':id': 'removable', class: 'removable-container'},
-        h3('Do not collect 300 dollars'),
-        button({':id': 'removableChild', onclick: removeParent
+      h4({v_id: 'head'}, 'Do update this text with the ^ input'),
+      div({v_id: 'removable', v_textValue: '', class: 'removable-container'},
+        h3({set_textValue: function(value) { this.textContent = value} },'Do not collect 300 dollars'),
+        button({v_id: 'removableChild', onclick: removeParent
       }, 'Remove my parent')
       ),
       hr(),
@@ -67,12 +67,21 @@ function init() {
       p("Neutra flexitarian 3 wolf moon fanny pack actually distillery DIY chillwave High Life raw denim synth chambray pug typewriter XOXO yr artisan put a bird on it organic letterpress direct trade  American Apparel semiotics cliche farm-to-table cardigan mustache Williamsburg roof party Carles Shoreditch tote bag Odd Future keffiyeh readymade iPhone Banksy paleo hoodie umami authentic narwhal fap dreamcatcher forage kogi wolf cornhole mixtape wayfarers Pinterest skateboard brunch blog disrupt Intelligentsia post-ironic fixie selvage craft beer quinoa pop-up aesthetic vinyl retro Etsy gentrify sustainable banjo whatever try-hard trust fund butcher lo-fi next level pickled leggings flannel cray Cosby sweater deep v Helvetica mumblecore meggings beard heirloom viral sartorial small batch tattooed vegan biodiesel four loko chia art party Tonx fingerstache +1 PBR&B you probably haven't heard of them pour-over plaid mlkshk seitan keytar freegan bespoke cred Bushwick swag ennui literally jean shorts Brooklyn meh slow-carb YOLO Truffaut VHS food truck crucifix Blue Bottle street art hella messenger bag tousled PBR kitsch sriracha 8-bit Tumblr Pitchfork gastropub Echo Park kale chips tofu ethical irony salvia gluten-free selfies church-key shabby chic stumptown before they sold out scenester hashtag ugh Marfa single-origin coffee fashion axe pork belly Godard asymmetrical photo booth bicycle rights twee Schlitz normcore master cleanse locavore Wes Anderson drinking vinegar banh mi Vice 90's Kickstarter Thundercats occupy Portland lomo squid bitters Austin polaroid McSweeney's"),
       e('span')('you could also define an element with this way.'),
       e('br')(),
+      mint({v_id: 'mint'}, 
+        h1('Title'),
+        h3('Sub - Title'),
+        p('Body Element')
+      )
     ),
     button({onclick: (ev, el) => {
       showingContent = !showingContent
       showTheCode(el, showingContent)
     }}, 'So, You want to see the code?')
   ).render(document.body)
+
+  setTimeout(() => {
+    getHandle('removable').v_textValue = 'Using pass through virtual properities to set a child.'
+  }, 1500)
 }
 
 function removeParent() {
@@ -81,6 +90,34 @@ function removeParent() {
   console.log(getHandle('removable'))
   let childStillExists = getHandle('removableChild') ? 'child reference exists' : 'child reference is gone'
   console.log([childExists, 'after parent removal', childStillExists].join(', '))
+}
+
+
+function mint(config, children) {
+  let mt = e('mint')
+  config = Object.assign(config, {v_clickcount: 0, e_onincrement: function() {
+    this.v_clickcount = this.v_clickcount + 1
+  }})
+  return mt(config, 
+    hr(),
+    h2('Minty!'),
+    div(
+      h3('this is a custom element with a custom tag, but still allowing child elements'),
+      div(
+        div(
+          // this gets the childen as an array
+          Array.from(arguments).slice(1)
+        )
+      ),
+      button({onclick: function() {
+        this.emit('onincrement')
+      }}, 'Update parent!'),
+      div({v_clickcount: 0, set_clickcount: function() {
+        this.textContent = `Clickcount: ${this.v_clickcount}`
+      }}, ''),
+    ),
+    hr()
+  )
 }
 
 function getSectionComponent() {
@@ -111,7 +148,7 @@ function getSectionComponent() {
       let handle = Symbol('fun-section-h3')
       let count = 0;
       return section(
-        cH3({':id': handle}, this.attr.title),
+        cH3({v_id: handle}, this.attr.title),
         cP(this.attr.body), 
         cDiv(this.attr.footer),
         cButton({onclick: (ev, elem) => {
@@ -131,12 +168,12 @@ function getVirtualComponent() {
     processRender: function(elementParent) {
       console.log(this.attr)
       this.children.forEach(child => child.render(elementParent))
-      return elementParent
+      return this
     }
   })
 }
 
-function getOverrideEventCompoent() {
+function getOverrideEventComponent() {
   return register('div', {
     addEventListener: (elem, eventName, handler) => {
       // just for fun completely ignoring input event and doing our own thing
@@ -155,11 +192,11 @@ function showTheCode(elem, showingContent) {
       getHandle('code').elem.style = 'display: block'
       return
     }
-    let theCodes = div({':id': 'code'},
+    let theCodes = div({v_id: 'code'},
       [{title: 'DOM building function', func: init},
        {title: 'Get Virtual Component:', func: getVirtualComponent},
        {title: 'Get Section Component:', func: getSectionComponent},
-       {title: 'Get EventOverride Component', func: getOverrideEventCompoent}
+       {title: 'Get EventOverride Component', func: getOverrideEventComponent}
       ].map((i) => {
         return getVirtualComponent()(
           div(i.title),
@@ -208,6 +245,15 @@ function addStyles() {
       border-radius: 5px;
       outline: none;
     }
+    mint {
+      /** Lets make it minty */
+      background-color: rgb(50, 250, 190);
+    }
+
+    mint * {
+      background-color: rgb(50, 250, 190);
+    }
+
     .container {
       margin: 10px;
     }
