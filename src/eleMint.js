@@ -25,7 +25,7 @@ Object.keys(prototypeFuncs).forEach((key) => renderPipeline.prototype[key] = pro
 
 /**
  * Attaches the element to the Dom.
- * Could easily be overridden to allow full unit testing
+ * Could easily be overridden to allow full unit testing 
  * 
  * @param {HTMLElement} parentElement 
  * @returns 
@@ -58,25 +58,15 @@ function setProp(elem, name, value) {
 function setAttribute(elem, attr, value) {
     let name = MAPPED_ATTRIBUTES[attr] || attr
     // is native event property: 
-    if (attr.slice(0,2) === 'on') {
-        this.addEventListener(elem, name.slice(2), value)
-        return
+    if (hasPrefix(attr, 'on')) {
+        return this.addEventListener(elem, name.slice(2), value)
     }
     // is emit handler (custom event handler)
-    if (attr.slice(0, 2) === 'e_') {
+    if (hasPrefix(attr, 'e_') || hasPrefix(attr, 'set_')) {
         return this.addEmitHandler(attr, value)
     }
 
-    let isVirtual = (attr.slice(0, 2) === 'v_') || (attr.slice(0, 4) === 'set_')
-    if (DIRECT_SET_ATTRIBUTES[name] || isBool(value)) {
-        this.setProp(elem, name, value)
-        // ignoring virtual properties
-    } else if (isVirtual) {
-        this.setVirtual(elem, name, value)
-    } else {
-        elem.setAttribute(name, value)
-    }
-    define(this, name, value, isVirtual)
+    define(this, name, value)
 }
 
 function setVirtual(elem, name, value) {
@@ -119,18 +109,20 @@ function remove() {
     if (ep && ep !== this.elem) {
         ep.removeChild(this.elem)
     }
+    this.parent = null
+    this.parentElement = null
 }
 
 function emit(name) {
     if (!this.parent) { return }
     let eName = `e_${name}`
     let params = Array.from(arguments)
-    if (!this.parent[eName]) {
-        if (!this.parent.emit) { return }
-        this.parent.emit.apply(this.parent, params)
-        return
+    if (this.parent[eName]) {
+        this.parent[eName].apply(this.parent, params.slice(1))
     }
-    this.parent[eName].apply(this.parent, params.slice(1))
+    if (this.parent.emit) { 
+        this.parent.emit.apply(this.parent, params)
+    }
 }
 
 function addEmitHandler(name, handler) {
@@ -191,47 +183,52 @@ export function register(tagName, overrides) {
  * @param {any} obj 
  * @param {string} key
  * @param {any} value -- initial value
- * @param {boolean} isVirtual
- * @param {function(any)} [setter]
  */
-function define(obj, key, value, isVirtual, setter) {
-    let mKey = MAPPED_ATTRIBUTES[key] || key
+function define(obj, key, value) {
+    let mKey = MAPPED_ATTRIBUTES[key] || key,
+        isVirtual = hasPrefix(key, 'v_'),
+        elem = obj.elem
     var settings = {
       set: (val, override) => {
-          if (value === val && !override) { return }
-          if (!isVirtual &&  DIRECT_SET_ATTRIBUTES[mKey]) {
-            obj.elem[mKey] = val + ''
-          } else if (!isVirtual && !isUndefined(obj.attr[key])) {
-            obj.elem.setAttribute(key, val)
-          }
-          value = val
-          // don't propogate id's since they should be unique
-          if (isVirtual && key !== 'v_id') {
-              // Propogate to children
-              let getChildren = (p) => (p.renderedChildren || []).reduce((arr, next) => {
-                return arr.concat([next], getChildren(next))
-              },[])
-              getChildren(obj).forEach((child) => {
-                  if (obj.hasOwnProperty(key)) {
-                      child[key] = val
-                  }
-                  // TODO: maybe just set this if the prop exists so we don't execute this unless it changes?
-                  let setFuncName = key.replace('v_', 'set_')
-                  if (child[setFuncName]) {
-                      child[setFuncName].apply(child, [val])
-                  }
-              })
-          }
+        if (value === val && !override) { return }
+
+        if (isVirtual) {
+            obj.setVirtual(elem, key, value)
+        } else if (DIRECT_SET_ATTRIBUTES[key] || isBool(value)) {
+            obj.setProp(elem, key, value)
+        } else {
+            elem.setAttribute(key, value)
+        }
+        value = val
+
+        // don't propogate id's since they should be unique
+        if (isVirtual && key !== 'v_id') {
+            // Propogate to children
+            let getChildren = (p) => (p.renderedChildren || []).reduce((arr, next) => {
+            return arr.concat([next], getChildren(next))
+            },[])
+            getChildren(obj).forEach((child) => {
+                if (!child.hasOwnProperty(key)) { return }
+
+                child[key] = val
+                let setFuncName = key.replace('v_', 'set_')
+                if (child[setFuncName]) {
+                    child[setFuncName].apply(child, [val])
+                }
+            })
+        }
       },
       get: () => (key === 'style' && obj.element) ? obj.element.style || value : value
     }
-    if (setter) {
-        settings.set = setter
-    }
     Object.defineProperty(obj, mKey, settings)
-    settings.set(value, true)
+    settings.set(value, 1)
     return obj[mKey]
 }
+
+function hasPrefix(name, prefix) {
+    return name.slice(0, prefix.length) === prefix
+}
+
 
 /**
  * override function to allow overriding parts of the rendering pipeline, or even the whole rendering

@@ -31,7 +31,9 @@ function init() {
       input({
           type: 'text', 
           placeholder: 'something', 
-          oninput: (ev, elem) => getHandle('head').elem.textContent = elem.value
+          oninput: function(ev, elem) {
+            getHandle('head').elem.textContent = elem.value
+          }
       }),
       h4({v_id: 'head'}, 'Do update this text with the ^ input'),
       div({v_id: 'removable', v_textValue: '', class: 'removable-container'},
