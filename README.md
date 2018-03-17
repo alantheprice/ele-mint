@@ -49,7 +49,7 @@ const div = e('div'),
     p = e('p'),
     button = e('button')
 
-div({class: 'main-container', e_onButton},
+div({class: 'main-container'},
     h1({class: 'hdg-1'}, 'Main site heading'),
     hr(),
     button({onclick: handleButtonClick}, 'click me!')),
