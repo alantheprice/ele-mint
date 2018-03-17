@@ -17,12 +17,12 @@
 ### Simple Usage for defining element
 
 ```javascript
-import { e } from 'ele-mint'
+import { register } from 'ele-mint'
 const div = e('div'),
-    h1 = e('h1'),
-    hr = e('hr'),
-    p = e('p'),
-    button = e('button')
+    h1 = register('h1'),
+    hr = register('hr'),
+    p = register('p'),
+    button = register('button')
 
 div({class: 'main-container'},
     h1({class: 'hdg hdg--1'}, 'Main site heading'),
