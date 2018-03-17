@@ -40,7 +40,7 @@ Which renders out the following within the body tag:
 
 ```html
 <div class="main-container">
-    <h1 class="hdg-1">Main site heading</h1>
+    <h1 class="hdg hdg--1">Main site heading</h1>
     <hr>
     <p>some body copy here, what good is a site without content?</p>
     <button>click me!</button>
