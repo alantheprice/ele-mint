@@ -1,20 +1,8 @@
-import { e, register, override, getHandle} from 'ele-mint'
-let section = register('section'),
-  button = register('button'),
-  div = register('div'),
-  h1 = register('h1'),
-  h2 = register('h2'),
-  h3 = register('h3'),
-  h4 = register('h4'),
-  hr = register('hr'),
-  ol = register('ol'),
-  li = register('li'),
-  input = register('input'),
-  p = register('p'),
-  pre = register('pre'),
-  code = register('code'),
-  style = register('style'),
-  fSection = getSectionComponent(),
+import { e, register, override, getHandle} from './src/eleMint'
+const ELEMENTS = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hr|html|i|iframe|img|input|ins|kbd|label|legend|li|link|main|map|mark|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|rtc|ruby|s|samp|script|section|select|slot|small|source|span|strong|style|sub|summary|sup|table|tbody|td|template|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr'.split('|').reduce((agg, next) => {agg[next] = register(next); return agg;}, {})
+let { section, button, div, h1, h2, h3, h4, hr, ol, li, input, p, pre, code, style } = ELEMENTS
+
+let fSection = getSectionComponent(),
   virtual = getVirtualComponent(),
   eventual = getOverrideEventComponent(),
   showingContent = true
@@ -23,8 +11,8 @@ addStyles()
 init()
 
 function init() {
-  div({class: 'container', v_id: 'parent'},
-    div({v_id: 'pageContent'},
+  div({class: 'container', _id: 'parent'},
+    div({_id: 'pageContent'},
       h1('Pitifully styled page'),
       h2('Do go to the store'),
       h3('Do not pass go'),
@@ -35,10 +23,10 @@ function init() {
             getHandle('head').elem.textContent = elem.value
           }
       }),
-      h4({v_id: 'head'}, 'Do update this text with the ^ input'),
-      div({v_id: 'removable', v_textValue: '', class: 'removable-container'},
+      h4({_id: 'head'}, 'Do update this text with the ^ input'),
+      div({_id: 'removable', v_textValue: '', class: 'removable-container'},
         h3({set_textValue: function(value) { this.textContent = value} },'Do not collect 300 dollars'),
-        button({v_id: 'removableChild', onclick: removeParent
+        button({_id: 'removableChild', onclick: removeParent
       }, 'Remove my parent')
       ),
       hr(),
@@ -69,7 +57,7 @@ function init() {
       p("Neutra flexitarian 3 wolf moon fanny pack actually distillery DIY chillwave High Life raw denim synth chambray pug typewriter XOXO yr artisan put a bird on it organic letterpress direct trade  American Apparel semiotics cliche farm-to-table cardigan mustache Williamsburg roof party Carles Shoreditch tote bag Odd Future keffiyeh readymade iPhone Banksy paleo hoodie umami authentic narwhal fap dreamcatcher forage kogi wolf cornhole mixtape wayfarers Pinterest skateboard brunch blog disrupt Intelligentsia post-ironic fixie selvage craft beer quinoa pop-up aesthetic vinyl retro Etsy gentrify sustainable banjo whatever try-hard trust fund butcher lo-fi next level pickled leggings flannel cray Cosby sweater deep v Helvetica mumblecore meggings beard heirloom viral sartorial small batch tattooed vegan biodiesel four loko chia art party Tonx fingerstache +1 PBR&B you probably haven't heard of them pour-over plaid mlkshk seitan keytar freegan bespoke cred Bushwick swag ennui literally jean shorts Brooklyn meh slow-carb YOLO Truffaut VHS food truck crucifix Blue Bottle street art hella messenger bag tousled PBR kitsch sriracha 8-bit Tumblr Pitchfork gastropub Echo Park kale chips tofu ethical irony salvia gluten-free selfies church-key shabby chic stumptown before they sold out scenester hashtag ugh Marfa single-origin coffee fashion axe pork belly Godard asymmetrical photo booth bicycle rights twee Schlitz normcore master cleanse locavore Wes Anderson drinking vinegar banh mi Vice 90's Kickstarter Thundercats occupy Portland lomo squid bitters Austin polaroid McSweeney's"),
       e('span')('you could also define an element with this way.'),
       e('br')(),
-      mint({v_id: 'mint'}, 
+      mint({_id: 'mint'}, 
         h1('Title'),
         h3('Sub - Title'),
         p('Body Element')
@@ -125,13 +113,13 @@ function mint(config, children) {
 function getSectionComponent() {
 
   let customRegister = override({
-    setProp: (el, name, val) => {
+    setProp: function (name, val) {
       console.log('set the props')
-      el[name] = val
+      this.elem[name] = val
     },
-    addEventListener: (el, name, handler) => {
+    addEventListener: function (name, handler) {
       console.log('Adding event listener')
-      el.addEventListener(name, (ev) => handler(ev, el))
+      this.elem.addEventListener(name, (ev) => handler(ev, this.elem))
     }
   })
   let cDiv = customRegister('div')
@@ -150,7 +138,7 @@ function getSectionComponent() {
       let handle = Symbol('fun-section-h3')
       let count = 0;
       return section(
-        cH3({v_id: handle}, this.attr.title),
+        cH3({_id: handle}, this.attr.title),
         cP(this.attr.body), 
         cDiv(this.attr.footer),
         cButton({onclick: (ev, elem) => {
@@ -177,11 +165,11 @@ function getVirtualComponent() {
 
 function getOverrideEventComponent() {
   return register('div', {
-    addEventListener: (elem, eventName, handler) => {
+    addEventListener: function (eventName, handler) {
       // just for fun completely ignoring input event and doing our own thing
       // basically illustrating overriding a part of the rendering pipeline.
-      elem.addEventListener('mousedown', ev => handler(ev))
-      elem.addEventListener('touchstart', ev => handler(ev))
+      this.elem.addEventListener('mousedown', ev => handler(ev))
+      this.elem.addEventListener('touchstart', ev => handler(ev))
     }
   })
 }
@@ -194,7 +182,7 @@ function showTheCode(elem, showingContent) {
       getHandle('code').elem.style = 'display: block'
       return
     }
-    let theCodes = div({v_id: 'code'},
+    let theCodes = div({_id: 'code'},
       [{title: 'DOM building function', func: init},
        {title: 'Get Virtual Component:', func: getVirtualComponent},
        {title: 'Get Section Component:', func: getSectionComponent},

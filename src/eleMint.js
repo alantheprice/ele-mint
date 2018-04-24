@@ -15,6 +15,12 @@ const //ELEMENTS = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|block
         'remove': remove,
         'emit': emit
     },
+    LIFECYCLE_HOOKS = ['onRender', 'onAttach', 'onDestroy'],
+    LIFECYCLE_EVENTS = {
+        RENDER: LIFECYCLE_HOOKS[0],
+        ATTACH: LIFECYCLE_HOOKS[1],
+        DESTROY: LIFECYCLE_HOOKS[2]
+    },
     isString = isType('string'),
     isUndefined = isType('undefined'),
     isBool = isType('boolean'),
@@ -32,7 +38,7 @@ Object.keys(prototypeFuncs).forEach((key) => renderPipeline.prototype[key] = pro
  */
 function attach(parentElement) {
     this.parentElement = parentElement
-    let element = this.elem 
+    let element = this.elem
     if (!element) {
         element = document.createElement(this.tagName)
         parentElement.appendChild(element)
@@ -40,36 +46,32 @@ function attach(parentElement) {
     return element
 }
 
-function addEventListener(elem, evName, handler) {
-    elem.addEventListener(evName, (ev) => handler.apply(this, [ev, elem]))
+function addEventListener(evName, handler) {
+    let _this = this
+    this.elem.addEventListener(evName, function (ev) { handler.apply(_this, [ev, _this.elem])})
 }
-function setProp(elem, name, value) {
-    elem[name] = value
+
+function setProp(name, value) {
+    this.elem[name] = value
 }
 
 /**
  * Set an attribute on the element
  * -- Can be overridden.
  * 
- * @param {HTMLElement} elem 
- * @param {string} attr 
+ * @param {string} attributeName 
  * @param {any} value 
  */
-function setAttribute(elem, attr, value) {
-    let name = MAPPED_ATTRIBUTES[attr] || attr
-    // is native event property: 
-    if (hasPrefix(attr, 'on')) {
-        return this.addEventListener(elem, name.slice(2), value)
+function setAttribute(attributeName, value) {
+    let name = MAPPED_ATTRIBUTES[attributeName] || attributeName
+    if (!this.elem) {
+        this.attr[attributeName] = value
+        return
     }
-    // is emit handler (custom event handler)
-    if (hasPrefix(attr, 'e_') || hasPrefix(attr, 'set_')) {
-        return this.addEmitHandler(attr, value)
-    }
-
     define(this, name, value)
 }
 
-function setVirtual(elem, name, value) {
+function setVirtual(name, value) {
     // can be overridden to allow usage
 }
 
@@ -94,10 +96,24 @@ function renderChildren(parentElement, children) {
 function processRender(parentElement) {
     let elem = this.attach(parentElement, this)
     this.elem = elem
+    this.element = elem
+    commitLifecycleEvent(this, LIFECYCLE_EVENTS.ATTACH)
     this.renderedChildren = this.renderChildren(elem, this.children)
     Object.keys(this.attr).forEach((attr) => {
-        this.setAttribute(elem, attr, this.attr[attr])
+        let value = this.attr[attr]
+        // lifecycle hooks are handled elsewhere.
+        if (LIFECYCLE_HOOKS.indexOf(attr) > -1) { return }
+        // is native event property: 
+        if (hasPrefix(attr, 'on')) {
+            return this.addEventListener(attr.slice(2), value)
+        }
+        // is emit handler (custom event handler)
+        if (hasPrefix(attr, 'e_') || hasPrefix(attr, 'set_')) {
+            return this.addEmitHandler(attr, value)
+        }
+        this.setAttribute(attr, value)
     })
+    commitLifecycleEvent(this, LIFECYCLE_EVENTS.RENDER)
     return this
 }
 
@@ -111,6 +127,7 @@ function remove() {
     }
     this.parent = null
     this.parentElement = null
+    commitLifecycleEvent(this, LIFECYCLE_EVENTS.destroy)
 }
 
 function emit(name) {
@@ -120,13 +137,68 @@ function emit(name) {
     if (this.parent[eName]) {
         this.parent[eName].apply(this.parent, params.slice(1))
     }
-    if (this.parent.emit) { 
+    if ((this.parent || {}).emit) { 
         this.parent.emit.apply(this.parent, params)
     }
 }
 
 function addEmitHandler(name, handler) {
     this[name] = handler
+}
+
+function commitLifecycleEvent(context, eventName) {
+    if (context.attr[eventName]) {
+        context.attr[eventName].call(context)
+    }
+}
+
+/**
+ * Define property, used to set 
+ * 
+ * @param {any} obj 
+ * @param {string} key
+ * @param {any} value -- initial value
+ */
+function define(obj, key, value) {
+    let mKey = MAPPED_ATTRIBUTES[key] || key,
+        isVirtual = hasPrefix(key, 'v_'),
+        isPrivate = hasPrefix(key, '_'),
+        elem = obj.elem
+    if (isPrivate) {
+        obj[mKey] = value
+        return value
+    }
+    var settings = {
+      set: (val, override) => {
+        if (value === val && !override) { return }
+
+        if (isVirtual) {
+            obj.setVirtual(key, val)
+            // Propogate to children
+            let getChildren = (p) => (p.renderedChildren || []).reduce((arr, next) => {
+                return arr.concat([next], getChildren(next))
+            },[])
+            getChildren(obj).forEach((child) => {
+                if (!child.hasOwnProperty(key)) { return }
+
+                child[key] = val
+                let setFuncName = key.replace('v_', 'set_')
+                if (child[setFuncName]) {
+                    child[setFuncName].apply(child, [val])
+                }
+            })
+        } else if (DIRECT_SET_ATTRIBUTES[key] || isBool(val)) {
+            obj.setProp(key, val)
+        } else {
+            elem.setAttribute(key, val)
+        }
+        value = val
+      },
+      get: () => (key === 'style' && obj.element) ? obj.element.style || value : value
+    }
+    Object.defineProperty(obj, mKey, settings)
+    settings.set(value, 1)
+    return obj[mKey]
 }
 
 /**
@@ -166,7 +238,7 @@ export function register(tagName, overrides) {
             attr: attributes || {},
             render: function(ep) {
                 let c = this.processRender(ep) 
-                this.handle = c.attr.id || c.attr.v_id || Symbol(c.tagName)
+                this.handle = this.handle || c.attr.id || c.attr._id || Symbol(c.tagName)
                 if (c.elem) {
                     c.elem.remove = c.remove
                 }
@@ -177,58 +249,9 @@ export function register(tagName, overrides) {
     }
 }
 
-/**
- * Define property, used to set 
- * 
- * @param {any} obj 
- * @param {string} key
- * @param {any} value -- initial value
- */
-function define(obj, key, value) {
-    let mKey = MAPPED_ATTRIBUTES[key] || key,
-        isVirtual = hasPrefix(key, 'v_'),
-        elem = obj.elem
-    var settings = {
-      set: (val, override) => {
-        if (value === val && !override) { return }
-
-        if (isVirtual) {
-            obj.setVirtual(elem, key, value)
-        } else if (DIRECT_SET_ATTRIBUTES[key] || isBool(value)) {
-            obj.setProp(elem, key, value)
-        } else {
-            elem.setAttribute(key, value)
-        }
-        value = val
-
-        // don't propogate id's since they should be unique
-        if (isVirtual && key !== 'v_id') {
-            // Propogate to children
-            let getChildren = (p) => (p.renderedChildren || []).reduce((arr, next) => {
-            return arr.concat([next], getChildren(next))
-            },[])
-            getChildren(obj).forEach((child) => {
-                if (!child.hasOwnProperty(key)) { return }
-
-                child[key] = val
-                let setFuncName = key.replace('v_', 'set_')
-                if (child[setFuncName]) {
-                    child[setFuncName].apply(child, [val])
-                }
-            })
-        }
-      },
-      get: () => (key === 'style' && obj.element) ? obj.element.style || value : value
-    }
-    Object.defineProperty(obj, mKey, settings)
-    settings.set(value, 1)
-    return obj[mKey]
-}
-
 function hasPrefix(name, prefix) {
     return name.slice(0, prefix.length) === prefix
 }
-
 
 /**
  * override function to allow overriding parts of the rendering pipeline, or even the whole rendering
@@ -239,9 +262,9 @@ function hasPrefix(name, prefix) {
  */
 export function override(overrides) {
     return function(tagName, secondaryOverride) {
-        return register(tagName, Object.assign(overrides,secondaryOverride))
+        return register(tagName, Object.assign({}, overrides, secondaryOverride))
     }
-} 
+}
 
 export const e = register
 

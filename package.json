@@ -1,9 +1,11 @@
 {
   "name": "ele-mint",
-  "version": "1.0.14",
+  "version": "1.0.20",
   "description": "Library to simplify dom creation into a set of simple, callable functions with flexible component extensibility",
   "main": "dist/eleMint.min.js",
   "devDependencies": {
+    "@babel/core": "^7.0.0-beta.41",
+    "@babel/preset-env": "^7.0.0-beta.41",
     "babel-core": "^6.26.0",
     "babel-loader": "^7.1.2",
     "babel-plugin-add-module-exports": "^0.2.1",
@@ -11,11 +13,17 @@
     "es6-import": "^1.6.3",
     "eslint": "^4.18.1",
     "eslint-loader": "^1.9.0",
-    "mocha": "^5.0.1",
+    "karma": "^2.0.0",
+    "karma-babel-preprocessor": "^8.0.0-beta.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-mocha": "^1.3.0",
+    "karma-sourcemap-loader": "^0.3.7",
+    "karma-webpack": "^2.0.13",
+    "mocha": "^5.0.4",
     "webpack": "^3.11.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "./node_modules/karma/bin/karma start",
     "start": "node server.js"
   },
   "keywords": [
@@ -25,5 +33,16 @@
     "html"
   ],
   "author": "alan@theprices.us",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alantheprice/ele-mint.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alantheprice/ele-mint/issues"
+  },
+  "homepage": "https://github.com/alantheprice/ele-mint#readme",
+  "dependencies": {
+    "jasmine": "^3.1.0"
+  }
 }
