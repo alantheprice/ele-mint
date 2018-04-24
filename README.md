@@ -17,48 +17,34 @@
 ### Simple Usage for defining element
 
 ```javascript
-import { e } from 'ele-mint'
+import { register } from 'ele-mint'
+const div = e('div'),
+    h1 = register('h1'),
+    hr = register('hr'),
+    p = register('p'),
+    button = register('button')
 
-e('div')({class: 'main-container'},
-    e('h1')({class: 'hdg-1'}, 'Main site heading'),
-    e('hr')(),
-    e('p')('some body copy here, what good is a site without content?'),
-    e('button')({ onclick: function() {console.log('button clicked')}}, 'click me!'),
+div({class: 'main-container'},
+    h1({class: 'hdg hdg--1'}, 'Main site heading'),
+    hr(),
+    p('some body copy here, what good is a site without content?'), 
+    button({onclick: handleButtonClick}, 'click me!'))
 ).render(document.body)
+
+function handleButtonClick(nativeEvent) {
+    console.log('button clicked')
+}
 ```
 
 Which renders out the following within the body tag:
 
 ```html
 <div class="main-container">
-    <h1 class="hdg-1">Main site heading</h1>
+    <h1 class="hdg hdg--1">Main site heading</h1>
     <hr>
     <p>some body copy here, what good is a site without content?</p>
     <button>click me!</button>
 </div>
-```
-
-And that definitely works, but it defeats the overall goal of simplicity of syntax.
-This is the syntactically preferred way to complete the same task:
-
-```javascript
-import { e } from 'ele-mint'
-const div = e('div'),
-    h1 = e('h1'),
-    hr = e('hr'),
-    p = e('p'),
-    button = e('button')
-
-div({class: 'main-container', e_onButton},
-    h1({class: 'hdg-1'}, 'Main site heading'),
-    hr(),
-    button({onclick: handleButtonClick}, 'click me!')),
-    p('some body copy here, what good is a site without content?')
-).render(document.body)
-
-function handleButtonClick(nativeEvent) {
-    console.log('button clicked')
-}
 ```
 
 #### Example with events
