@@ -27,8 +27,8 @@ const div = e('div'),
 div({class: 'main-container'},
     h1({class: 'hdg hdg--1'}, 'Main site heading'),
     hr(),
-    button({onclick: handleButtonClick}, 'click me!')),
-    p('some body copy here, what good is a site without content?')
+    p('some body copy here, what good is a site without content?'), 
+    button({onclick: handleButtonClick}, 'click me!'))
 ).render(document.body)
 
 function handleButtonClick(nativeEvent) {
