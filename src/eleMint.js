@@ -99,20 +99,28 @@ function processRender(parentElement) {
     this.element = elem
     commitLifecycleEvent(this, LIFECYCLE_EVENTS.ATTACH)
     this.renderedChildren = this.renderChildren(elem, this.children)
-    Object.keys(this.attr).forEach((attr) => {
+    const isEventHandling = (name) => hasPrefix(name, 'e_') || hasPrefix(name, 'set_')
+    const addProps = (attr) => {
         let value = this.attr[attr]
         // lifecycle hooks are handled elsewhere.
-        if (LIFECYCLE_HOOKS.indexOf(attr) > -1) { return }
+        if (LIFECYCLE_HOOKS.indexOf(attr) > -1 || !attr) { return }
         // is native event property: 
         if (hasPrefix(attr, 'on')) {
             return this.addEventListener(attr.slice(2), value)
         }
         // is emit handler (custom event handler)
-        if (hasPrefix(attr, 'e_') || hasPrefix(attr, 'set_')) {
+        if (isEventHandling(attr)) {
             return this.addEmitHandler(attr, value)
         }
         this.setAttribute(attr, value)
+    }
+    Object.getOwnPropertyNames(this.attr.__proto__).forEach(name => {
+        if(isEventHandling(name)) {
+            this.addEmitHandler(name, this.attr[name])
+        }
     })
+    Object.keys(this.attr).forEach(addProps)
+
     commitLifecycleEvent(this, LIFECYCLE_EVENTS.RENDER)
     return this
 }
