@@ -135,7 +135,7 @@ function remove() {
     }
     this.parent = null
     this.parentElement = null
-    commitLifecycleEvent(this, LIFECYCLE_EVENTS.destroy)
+    commitLifecycleEvent(this, LIFECYCLE_EVENTS.DESTROY)
 }
 
 function emit(name) {
