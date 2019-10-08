@@ -1,6 +1,5 @@
-const //ELEMENTS = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|blockquote|body|br|button|canvas|caption|cite|code|col|colgroup|data|datalist|dd|del|details|dfn|div|dl|dt|em|embed|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|head|header|hr|html|i|iframe|img|input|ins|kbd|label|legend|li|link|main|map|mark|meta|meter|nav|noscript|object|ol|optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|rtc|ruby|s|samp|script|section|select|slot|small|source|span|strong|style|sub|summary|sup|table|tbody|td|template|textarea|tfoot|th|thead|time|title|tr|track|u|ul|var|video|wbr'.split('|'),
-    MAPPED_ATTRIBUTES = { class: 'className' },
-    DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|style'.split('|')
+const MAPPED_ATTRIBUTES = { class: 'className' },
+    DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|style|checked|selected|src|srcdoc|srcset|tabindex|target'.split('|')
         .reduce((agg, next)=> { agg[next] = 1; return agg }, {}),
     handles = {},
     prototypeFuncs = {
@@ -11,9 +10,10 @@ const //ELEMENTS = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|block
         'setAttribute': setAttribute,
         'setVirtual': setVirtual,
         'renderChildren': renderChildren,
-        'processRender': processRender,
+        'render': render,
         'remove': remove,
-        'emit': emit
+        'emit': emit,
+        'mount': mount
     },
     LIFECYCLE_HOOKS = ['onRender', 'onAttach', 'onDestroy'],
     LIFECYCLE_EVENTS = {
@@ -24,27 +24,11 @@ const //ELEMENTS = 'a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|block
     isString = isType('string'),
     isUndefined = isType('undefined'),
     isBool = isType('boolean'),
-    renderPipeline = function() {}
+    isFunction = isType('function')
+export const Component = function(props) { this.props = props }
 
 // pipe renderer functions to prototype.
-Object.keys(prototypeFuncs).forEach((key) => renderPipeline.prototype[key] = prototypeFuncs[key])
-
-/**
- * Attaches the element to the Dom.
- * Could easily be overridden to allow full unit testing 
- * 
- * @param {HTMLElement} parentElement 
- * @returns 
- */
-function attach(parentElement) {
-    this.parentElement = parentElement
-    let element = this.elem
-    if (!element) {
-        element = document.createElement(this.tagName)
-        parentElement.appendChild(element)
-    }
-    return element
-}
+Object.keys(prototypeFuncs).forEach((key) => Component.prototype[key] = prototypeFuncs[key])
 
 function addEventListener(evName, handler) {
     let _this = this
@@ -75,16 +59,15 @@ function setVirtual(name, value) {
     // can be overridden to allow usage
 }
 
-function renderChildren(parentElement, children) {
-    return children.map((child) => {
-        if (!child.render) { 
-            error("child must have render function") 
-        }
-        child.parent = this
-        return child.render(parentElement)
-    })
+function mount(parentElement) {
+    let c = this.render(parentElement) 
+    this.handle = this.handle || c.attr.id || c.attr._id || Symbol(c.tagName || "v")
+    if (c.elem) {
+        c.elem.remove = c.remove
+    }
+    handles[this.handle] = c
+    return c
 }
-
 
 /**
  * Renders the element and children to the DOM
@@ -93,12 +76,13 @@ function renderChildren(parentElement, children) {
  * @param {HTMLElement} parentElement
  * @returns {any}
  */
-function processRender(parentElement) {
-    let elem = this.attach(parentElement, this)
+function render(parentElement) {
+    let elem = this.attach(parentElement)
     this.elem = elem
     this.element = elem
+    this.attr = this.attr || {}
     commitLifecycleEvent(this, LIFECYCLE_EVENTS.ATTACH)
-    this.renderedChildren = this.renderChildren(elem, this.children)
+    this.renderedChildren = this.renderChildren(elem)
     const isEventHandling = (name) => hasPrefix(name, 'e_') || hasPrefix(name, 'set_')
     const addProps = (attr) => {
         let value = this.attr[attr]
@@ -125,6 +109,37 @@ function processRender(parentElement) {
     return this
 }
 
+function renderChildren(parentElement) {
+    if (!this.children && isFunction(this.content)) {
+        this.children = [this.content()]
+    }
+    return this.children.map((child) => {
+        if (!child.render) { 
+            error("child must have render function") 
+        }
+        child.parent = this
+        return child.mount(parentElement)
+    })
+}
+
+/**
+ * Attaches the element to the Dom.
+ * Could easily be overridden to allow full unit testing 
+ * 
+ * @param {HTMLElement} parentElement 
+ * @returns 
+ */
+function attach(parentElement) {
+    this.parentElement = parentElement
+    // if a virtual element, tagName is not defined, thus, element should pass through
+    let element = this.tagName ? this.elem : this.parentElement
+    if (!element) {
+        element = document.createElement(this.tagName)
+        parentElement.appendChild(element)
+    }
+    return element
+}
+
 function remove() {
     // for cleanup of handles to eliminate memory leak
     this.renderedChildren.forEach(c => c.remove())
@@ -145,7 +160,7 @@ function emit(name) {
     if (this.parent[eName]) {
         this.parent[eName].apply(this.parent, params.slice(1))
     }
-    if ((this.parent || {}).emit) { 
+    if (this.parent.emit) { 
         this.parent.emit.apply(this.parent, params)
     }
 }
@@ -155,13 +170,14 @@ function addEmitHandler(name, handler) {
 }
 
 function commitLifecycleEvent(context, eventName) {
-    if (context.attr[eventName]) {
-        context.attr[eventName].call(context)
+    let event =  context[eventName] || context.attr[eventName]
+    if (event) {
+        event.call(context)
     }
 }
 
 /**
- * Define property, used to set 
+ * Define property, used to set values and attributes
  * 
  * @param {any} obj 
  * @param {string} key
@@ -212,7 +228,7 @@ function define(obj, key, value) {
 /**
  * Returns a function closure for building different html elements.
  * 
- * @param {string} tagName 
+ * @param {string|Function} tagName 
  * @param {any} [overrides] 
  * @returns 
  */
@@ -228,6 +244,7 @@ export function register(tagName, overrides) {
      * @returns {FunDom}
      */
     return function construct(attributes) {
+
         attributes = attributes || {}
         let children = Array.from(arguments).slice(1)
         if (attributes.render || Array.isArray(attributes) && attributes[0].render) {
@@ -239,26 +256,23 @@ export function register(tagName, overrides) {
             attributes.textContent = children[0]
             children = children.slice(1)
         }
+        children = [].concat.apply([], children)
+        const attr = attributes || {};
+        if (isFunction(tagName)) {
+            const props = Object.assign(attr, {children: children})
+            if (tagName.constructor) {
+                return new tagName(props)
+            }
+            debugger
+            tagName.prototype = Object.assign(Component.prototype, tagName.prototype, overrides)
+            return tagName(props)
+        }
         return Object.assign({
             tagName: tagName,
-            // flatten if children were passed in as arrays.
-            children: [].concat.apply([], children),
-            attr: attributes || {},
-            render: function(ep) {
-                let c = this.processRender(ep) 
-                this.handle = this.handle || c.attr.id || c.attr._id || Symbol(c.tagName)
-                if (c.elem) {
-                    c.elem.remove = c.remove
-                }
-                handles[this.handle] = c
-                return c
-            }
-        }, renderPipeline.prototype, overrides)
+            children: children,
+            attr: attr,
+        }, Component.prototype, overrides)
     }
-}
-
-function hasPrefix(name, prefix) {
-    return name.slice(0, prefix.length) === prefix
 }
 
 /**
@@ -276,8 +290,13 @@ export function override(overrides) {
 
 export const e = register
 
-export function getHandle(id) {
-    return handles[id]
+export const getHandle = id => handles[id]
+
+/** Util Functions */
+
+
+function hasPrefix(name, prefix) {
+    return name.slice(0, prefix.length) === prefix
 }
 
 function error(message) {
