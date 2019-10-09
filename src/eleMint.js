@@ -93,6 +93,7 @@ function render(parentElement) {
         if (isEventHandling(attr)) {
             return this.addEmitHandler(attr, value)
         }
+        // TODO: This should probably only be happening when we are directly wrapping an element, and not when we are in a component.
         this.setAttribute(attr, value)
     }
     Object.getOwnPropertyNames(this.props.__proto__).forEach(name => {

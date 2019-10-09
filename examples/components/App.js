@@ -11,25 +11,32 @@ const div = register('div'),
 
 class App extends Component {
   constructor(props) {
+    props.v_text = ""
     super(props)
-    this.props = props
+    // this.props = props
     setTimeout(() => {
       console.log(this)
     }, 4000)
-    this.state = {
-      testValue: ""
-    }
+    // this.v_text = {
+    //   testValue: ""
+    // }
   }
 
   e_notify(notifyText) {
-    alert(notifyText)
+    this.v_text = notifyText
+    // alert(notifyText)
   }
 
   content() {
     return (
       div(
-        // TODO: Here we can build and test the idea of a follow prop.
-        h1(this.state.testValue),
+        // TODO: Here we can build and test the idea of a follow prop. this works, but it's ugly...
+        h1({
+            v_text:"",
+            set_text: function(text) {this.elem.innerText = text}
+          },
+          this.props.v_text
+        ),
         div({class: "btn", style: "background-color: brown;"}, "something"),
         Card(
             p("a bunch of rando contents that could easily be written out with better clarity.")
@@ -46,16 +53,19 @@ class App extends Component {
         ),
         Card(
           input({
+            v_text:"",
+            set_text: function(text) {this.elem.value = text},
             placeholder: "enter something here.",
             oninput: (ev, elem, context) => {
+              context.emit("notify", elem.value)
             }
           }),
           button({
             onclick: (ev, elem, context) => {
-              this.e_notify("someText")
+              context.emit("notify", "")
             }
           },
-          "CLICK ME!!"
+          "CLEAR"
           ),
         ),
       )
