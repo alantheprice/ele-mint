@@ -13,30 +13,32 @@ class App extends Component {
   constructor(props) {
     props.v_text = ""
     super(props)
-    // this.props = props
     setTimeout(() => {
       console.log(this)
     }, 4000)
-    // this.v_text = {
-    //   testValue: ""
-    // }
   }
 
+  /**
+   * TODO: Custom events like this should be able to be semantically correct ("onnotify", or "onNotify")
+   * Or possibly, we don't even need them if we don't need to notify up the stack at all? I want to rethink this, 
+   * but I am definitely tempted to keep them in to make it easier to do internal eventing.
+  */
   e_notify(notifyText) {
     this.v_text = notifyText
-    // alert(notifyText)
   }
+
+  /**
+   * The content function should be re-runable, and when it is re-run via "reload()",it needs to be intelligent
+   * For initial testing and prototyping, we can have it reload in simple state by just re-adding all elements, 
+   * but eventually it should loop through children and allow the child to control whether it needs to recreate, 
+   * or just update.
+   */
 
   content() {
     return (
       div(
         // TODO: Here we can build and test the idea of a follow prop. this works, but it's ugly...
-        h1({
-            v_text:"",
-            set_text: function(text) {this.elem.innerText = text}
-          },
-          this.props.v_text
-        ),
+        h1("Some Testing Here!"),
         div({class: "btn", style: "background-color: brown;"}, "something"),
         Card(
             p("a bunch of rando contents that could easily be written out with better clarity.")
@@ -52,6 +54,12 @@ class App extends Component {
             )
         ),
         Card(
+          h3({
+              v_text:"",
+              set_text: function(text) {this.elem.innerText = text}
+            },
+            this.props.v_text
+          ),
           input({
             v_text:"",
             set_text: function(text) {this.elem.value = text},
