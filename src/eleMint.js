@@ -1,67 +1,65 @@
-const MAPPED_ATTRIBUTES = { class: 'className' },
-    DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|style|checked|selected|src|srcdoc|srcset|tabindex|target'.split('|')
-        .reduce((agg, next)=> { agg[next] = 1; return agg }, {}),
-    handles = {},
-    prototypeFuncs = {
+const MAPPED_ATTRIBUTES = { class: 'className' }
+const DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|style|checked|selected|src|srcdoc|srcset|tabindex|target'.split('|')
+        .reduce((agg, next)=> { agg[next] = 1; return agg }, {})
+const handles = {}
+const prototypeFuncs = {
         'attach': attach,
         'addEventListener': addEventListener,
         'setProp': setProp,
         'addEmitHandler': addEmitHandler,
         'setAttribute': setAttribute,
-        'setVirtual': setVirtual,
         'renderChildren': renderChildren,
         'render': render,
         'remove': remove,
         'emit': emit,
         'mount': mount
-    },
-    LIFECYCLE_HOOKS = ['onRender', 'onAttach', 'onDestroy'],
-    LIFECYCLE_EVENTS = {
-        RENDER: LIFECYCLE_HOOKS[0],
-        ATTACH: LIFECYCLE_HOOKS[1],
-        DESTROY: LIFECYCLE_HOOKS[2]
-    },
-    isString = isType('string'),
-    isUndefined = isType('undefined'),
-    isBool = isType('boolean'),
-    isFunction = isType('function')
+    }
+const LIFECYCLE_HOOKS = ['onRender', 'onAttach', 'onDestroy']
+const LIFECYCLE_EVENTS_RENDER = LIFECYCLE_HOOKS[0]
+const LIFECYCLE_EVENTS_ATTACH = LIFECYCLE_HOOKS[1]
+const LIFECYCLE_EVENTS_DESTROY = LIFECYCLE_HOOKS[2]
+const isString = isType('string')
+const isUndefined = isType('undefined')
+const isBool = isType('boolean')
+const isFunction = isType('function')
+
+// Base
+/**
+ * Base Class/Prototype to extend for class usage
+ *  example: 
+ *  ```javascript
+ *  import { Component, register } from "ele-mint"
+ *  const section = register("section")
+ * 
+ *  class Container extents Component {
+ *  
+ *      content() {
+ *          return section({class: "c-section"}
+ *              this.props.children
+ *          )
+ *      }
+ *  }
+ *  export Container
+ *  ```
+ *
+ * @param {*} props
+ */
 export const Component = function(props) { this.props = props }
 
 // pipe renderer functions to prototype.
-Object.keys(prototypeFuncs).forEach((key) => Component.prototype[key] = prototypeFuncs[key])
+keys(prototypeFuncs).forEach((key) => Component.prototype[key] = prototypeFuncs[key])
 
 function addEventListener(evName, handler) {
-    let _this = this
-    this.elem.addEventListener(evName, function (ev) { handler.apply(_this, [ev, _this.elem])})
+    this.elem.addEventListener(evName, (ev) => { handler.apply(this, [ev, this.elem, this])})
 }
 
 function setProp(name, value) {
     this.elem[name] = value
 }
 
-/**
- * Set an attribute on the element
- * -- Can be overridden.
- * 
- * @param {string} attributeName 
- * @param {any} value 
- */
-function setAttribute(attributeName, value) {
-    let name = MAPPED_ATTRIBUTES[attributeName] || attributeName
-    if (!this.elem) {
-        this.attr[attributeName] = value
-        return
-    }
-    define(this, name, value)
-}
-
-function setVirtual(name, value) {
-    // can be overridden to allow usage
-}
-
 function mount(parentElement) {
     let c = this.render(parentElement) 
-    this.handle = this.handle || c.attr.id || c.attr._id || Symbol(c.tagName || "v")
+    this.handle = this.handle || this.props.id || this.props._id || Symbol(c.tagName || "v")
     if (c.elem) {
         c.elem.remove = c.remove
     }
@@ -80,12 +78,11 @@ function render(parentElement) {
     let elem = this.attach(parentElement)
     this.elem = elem
     this.element = elem
-    this.attr = this.attr || {}
-    commitLifecycleEvent(this, LIFECYCLE_EVENTS.ATTACH)
+    commitLifecycleEvent(this, LIFECYCLE_EVENTS_ATTACH)
     this.renderedChildren = this.renderChildren(elem)
     const isEventHandling = (name) => hasPrefix(name, 'e_') || hasPrefix(name, 'set_')
     const addProps = (attr) => {
-        let value = this.attr[attr]
+        let value = this.props[attr]
         // lifecycle hooks are handled elsewhere.
         if (LIFECYCLE_HOOKS.indexOf(attr) > -1 || !attr) { return }
         // is native event property: 
@@ -98,22 +95,45 @@ function render(parentElement) {
         }
         this.setAttribute(attr, value)
     }
-    Object.getOwnPropertyNames(this.attr.__proto__).forEach(name => {
+    Object.getOwnPropertyNames(this.props.__proto__).forEach(name => {
         if(isEventHandling(name)) {
-            this.addEmitHandler(name, this.attr[name])
+            this.addEmitHandler(name, this.props[name])
         }
     })
-    Object.keys(this.attr).forEach(addProps)
+    // TODO: I am pretty sure that I want to back this out and rethink the way that we are eventing data around.
+    keys(keys(this.props).reduce((props, next) => {
+        props[MAPPED_ATTRIBUTES[next] || next] = props[next]
+        return props
+    }, assign({}, DIRECT_SET_ATTRIBUTES))).forEach(addProps)
 
-    commitLifecycleEvent(this, LIFECYCLE_EVENTS.RENDER)
+    commitLifecycleEvent(this, LIFECYCLE_EVENTS_RENDER)
     return this
 }
 
-function renderChildren(parentElement) {
-    if (!this.children && isFunction(this.content)) {
-        this.children = [this.content()]
+/**
+ * Set an attribute on the element
+ * 
+ * @param {string} attributeName 
+ * @param {any} value 
+ */
+function setAttribute(attributeName, value) {
+    let name = MAPPED_ATTRIBUTES[attributeName] || attributeName
+    if (!this.elem) {
+        this.props[attributeName] = value
+        return
     }
-    return this.children.map((child) => {
+    if (attributeName === "children") {
+        return
+    }
+    define(this, name, value)
+}
+
+
+function renderChildren(parentElement) {
+    if (isFunction(this.content)) {
+        this.props.children = [this.content()]
+    }
+    return this.props.children.map((child) => {
         if (!child.render) { 
             error("child must have render function") 
         }
@@ -150,7 +170,7 @@ function remove() {
     }
     this.parent = null
     this.parentElement = null
-    commitLifecycleEvent(this, LIFECYCLE_EVENTS.DESTROY)
+    commitLifecycleEvent(this, LIFECYCLE_EVENTS_DESTROY)
 }
 
 function emit(name) {
@@ -170,7 +190,7 @@ function addEmitHandler(name, handler) {
 }
 
 function commitLifecycleEvent(context, eventName) {
-    let event =  context[eventName] || context.attr[eventName]
+    let event =  context[eventName] || context.props[eventName]
     if (event) {
         event.call(context)
     }
@@ -197,8 +217,8 @@ function define(obj, key, value) {
         if (value === val && !override) { return }
 
         if (isVirtual) {
-            obj.setVirtual(key, val)
-            // Propogate to children
+            // TODO: Make sure we only propogate to children within the component wall
+            // Think through the idea of a follow prop from the parent component that will update consistently, but only when the parent changes.
             let getChildren = (p) => (p.renderedChildren || []).reduce((arr, next) => {
                 return arr.concat([next], getChildren(next))
             },[])
@@ -221,24 +241,26 @@ function define(obj, key, value) {
       get: () => (key === 'style' && obj.element) ? obj.element.style || value : value
     }
     Object.defineProperty(obj, mKey, settings)
-    settings.set(value, 1)
+    if (!isUndefined(value)) {
+        settings.set(value, 1)
+    }
     return obj[mKey]
 }
 
 /**
  * Returns a function closure for building different html elements.
  * 
- * @param {string|Function} tagName 
+ * @param {string|Function} tagNameOrComponent 
  * @param {any} [overrides] 
  * @returns 
  */
-export function register(tagName, overrides) {
-    if (!tagName) {
-        error('tagName must be defined')
+export function register(tagNameOrComponent, overrides) {
+    if (!tagNameOrComponent) {
+        error('tagName or Component must be defined')
     }
 
     /**
-     * Create an element definition for tagName and input attributes
+     * Create an element definition for tagNameOrComponent and input attributes
      * @param {any} attributes 
      * @param {...FunDom} [children] 
      * @returns {FunDom}
@@ -256,21 +278,18 @@ export function register(tagName, overrides) {
             attributes.textContent = children[0]
             children = children.slice(1)
         }
-        children = [].concat.apply([], children)
-        const attr = attributes || {};
-        if (isFunction(tagName)) {
-            const props = Object.assign(attr, {children: children})
-            if (tagName.constructor) {
-                return new tagName(props)
+        const props =  assign(attributes || {}, {children: [].concat.apply([], children)})
+        // If tagNameOrComponent is a function, it is 
+        if (isFunction(tagNameOrComponent)) {
+            if (tagNameOrComponent.constructor) {
+                return new tagNameOrComponent(props)
             }
-            debugger
-            tagName.prototype = Object.assign(Component.prototype, tagName.prototype, overrides)
-            return tagName(props)
+            tagNameOrComponent.prototype = assign(Component.prototype, tagNameOrComponent.prototype, overrides)
+            return tagNameOrComponent(props)
         }
-        return Object.assign({
-            tagName: tagName,
-            children: children,
-            attr: attr,
+        return assign({
+            tagName: tagNameOrComponent,
+            props: props
         }, Component.prototype, overrides)
     }
 }
@@ -294,6 +313,13 @@ export const getHandle = id => handles[id]
 
 /** Util Functions */
 
+function keys(obj) {
+    return Object.keys(obj)
+}
+
+function assign() {
+    return Object.assign.apply(null, Array.from(arguments))
+}
 
 function hasPrefix(name, prefix) {
     return name.slice(0, prefix.length) === prefix
