@@ -7,13 +7,38 @@ const div = register('div'),
   h5 = register('h5'),
   hr = register('hr'),
   h1 = register('h1'),
-  input = register('input')
+  input = register('input'),
+  textarea = register('textarea'),
+  style = register("style")
+
+const notes = [
+  {
+    date: new Date().toISOString(),
+    message: "I really enjoyed this going here. The food was good, and relatively quick, the server was attentive, but not stiffling. This might become my standby."
+  },
+  {
+    date: new Date().toISOString(),
+    message: "I really enjoyed this going here. The food was good, and relatively quick, the server was attentive, but not stiffling. This might become my standby."
+  }
+]
+
+const Note = (note) => (
+  Card(
+    div(
+      h5(note.date)
+    ),
+    p({class: "padding--vertical"},
+      note.message
+    ),
+  )
+)
 
 class App extends Component {
   constructor(props) {
     props.v_text = ""
     super(props)
     setTimeout(() => {
+      process.env
       console.log(this)
     }, 4000)
   }
@@ -36,22 +61,24 @@ class App extends Component {
 
   content() {
     return (
-      div(
+      div({class: "page"},
         // TODO: Here we can build and test the idea of a follow prop. this works, but it's ugly...
-        h1("Some Testing Here!"),
-        div({class: "btn", style: "background-color: brown;"}, "something"),
+        h1("Testing!"),
+        div({class: "test"}, "something"),
         Card(
             p("a bunch of rando contents that could easily be written out with better clarity.")
         ),
         Card(
-            h3("Title"),
-            h5("description"),
-            div(
-                hr(),
-                div(
-                    div("some type of content here")
-                )
-            )
+          h3("Edit Note"),
+          textarea({class: "margin--vertical text-area"}),
+          div({class: "flx flx--space-btw"},
+            button("Save Note"),
+            button("Delete Note")
+          )
+        ),
+        h3("Notes"),
+        div(
+          notes.map(Note)
         ),
         Card(
           h3({
@@ -76,6 +103,61 @@ class App extends Component {
           "CLEAR"
           ),
         ),
+        style(`
+          :root {
+            --padding: 10px;
+          }
+          
+          .flx {
+            width: 100%;
+            display: flex;
+          }
+          .flx--column {
+            flex-direction: column;
+          }
+          .flx--space-btw {
+            justify-content: space-between;
+          }
+
+          .padding {
+            padding: var(--padding);
+          }
+          .padding--horizontal {
+            padding-left: var(--padding);
+            padding-right: var(--padding);
+          }
+          .padding--vertical {
+            padding-top: var(--padding);
+            padding-bottom: var(--padding);
+          }
+
+          .margin {
+            margin: var(--padding);
+          }
+          .margin--vertical {
+            margin-top: var(--padding);
+            margin-bottom: var(--padding);
+          }
+
+          /** components */
+
+          .page {
+            padding: 20px;
+          }
+          .card {
+            box-shadow: 3px 3px 10px rgba(80, 80, 80, .3);
+            border: 1px solid #CCC; 
+            padding: 20px; 
+            margin: 20px 0;
+            border-radius: 5px;
+          }
+          .text-area {
+            height:180px;
+            width: 100%;
+            margin-bottom: 20px;
+          }
+          
+        `)
       )
     )
   }

@@ -102,10 +102,11 @@ function render(parentElement) {
         }
     })
     // TODO: I am pretty sure that I want to back this out and rethink the way that we are eventing data around.
-    keys(keys(this.props).reduce((props, next) => {
-        props[MAPPED_ATTRIBUTES[next] || next] = props[next]
-        return props
-    }, assign({}, DIRECT_SET_ATTRIBUTES))).forEach(addProps)
+    // keys(keys(this.props).reduce((props, next) => {
+    //     props[MAPPED_ATTRIBUTES[next] || next] = props[next]
+    //     return props
+    // }, assign({}, DIRECT_SET_ATTRIBUTES))).forEach(addProps)
+    keys(this.props).forEach(addProps)
 
     commitLifecycleEvent(this, LIFECYCLE_EVENTS_RENDER)
     return this
@@ -162,7 +163,7 @@ function attach(parentElement) {
 }
 
 function remove() {
-    // for cleanup of handles to eliminate memory leak
+    // for cleanup of handles to eliminate memory leak -- can make the rest of the child cleanup async somehow
     this.renderedChildren.forEach(c => c.remove())
     handles[this.handle] = null
     let ep = this.parentElement;
