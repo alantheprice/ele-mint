@@ -1,4 +1,4 @@
-import { register } from '../../src/eleMint2'
+import { register } from '../../src/eleMint'
 const section = register('section');
 
 export default register((props) => 

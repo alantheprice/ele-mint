@@ -1,4 +1,4 @@
-import { register, Component } from '../../src/eleMint2'
+import { register, Component } from '../../src/eleMint'
 import Card from './Card';
 const div = register('div'),
   button = register('button'),
@@ -27,9 +27,6 @@ class App extends Component {
   constructor(props) {
     props.titleText = ""
     super(props)
-    setTimeout(() => {
-      console.log(this)
-    }, 4000)
   }
 
   /**
