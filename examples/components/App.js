@@ -25,7 +25,7 @@ const Note = register((props, update) => {
 
 class App extends Component {
   constructor(props) {
-    props.v_text = ""
+    props.titleText = ""
     super(props)
     setTimeout(() => {
       console.log(this)
@@ -36,14 +36,15 @@ class App extends Component {
    * TODO: Custom events like this should be able to be semantically correct ("onnotify", or "onNotify")
    * Or possibly, we don't even need them if we don't need to notify up the stack at all? I want to rethink this, 
    * but I am definitely tempted to keep them in to make it easier to do internal eventing.
+   * We should move to an "update function pattern" which handles eventing without having to explicitly call emit.
   */
   onNotify(notifyText) {
-    this.v_text = notifyText
+    this.titleText = notifyText
   }
 
   getClearHandler() {
     return (ev, elem, context) => {
-      this.v_text = notifyText
+      this.titleText = notifyText
     }
   }
 
@@ -80,15 +81,14 @@ class App extends Component {
           props.notes.map((note) => Note({note: note}))
         ),
         h3({
-            v_text:"",
-            set_text: function(text) {this.element.innerText = text}
+            // v_text:"",
+            // set_text: function(text) {this.element.innerText = text}
           },
-          
-          props.v_text
+          props.titleText
         ),
         input({
-          v_text:"",
-          set_text: function(text) {this.element.value = text},
+          // v_text:"",
+          // set_text: function(text) {this.element.value = text},
           placeholder: "enter something here.",
           oninput: (ev, elem, context) => {
             context.emit("notify", elem.value)
@@ -96,7 +96,7 @@ class App extends Component {
           value: follow("titleText")
         }),
         button({
-          onclick: this.getClickHandler()
+          onclick: this.getClearHandler()
         },
         "CLEAR"
         ),

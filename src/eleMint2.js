@@ -6,7 +6,7 @@ const prototypeFuncs = {
         'attach': attach,
         'addEventListener': addEventListener,
         'setProp': setProp,
-        'addEmitHandler': addEmitHandler,
+        // 'addEmitHandler': addEmitHandler,
         'setAttribute': setAttribute,
         'renderChildren': renderChildren,
         'render': render,
@@ -14,7 +14,7 @@ const prototypeFuncs = {
         // 'emit': emit,
         // TODO: Define and manage updates
         'update': () => {},
-        'follow': (key) => {},
+        'follow': follow,
         'mount': mount
     }
 const hasPrefix = (name, prefix) => name.slice(0, prefix.length) === prefix
@@ -56,6 +56,8 @@ const isFunction = isType('function')
  * @param {*} props
  */
 export const Component = function(props, tagName, overrides) { 
+    // TODO: We should do some magic here to find out if the prop is passed in, or if it is internal to the class....
+    // Then we could figure out if we have to emit to the parent, or just handle internally.
     this.props = props
     this.tagName = tagName
     this.isVirtual = !this.tagName
@@ -101,7 +103,7 @@ function render(parentElement, parentComponent) {
     this.element = this.isVirtual ? null : elem
     commitLifecycleEvent(this, LIFECYCLE_EVENTS_ATTACH)
     this.renderedChildren = this.renderChildren(elem, this.isVirtual ? this : parentComponent)
-    const isEventHandling = (name) => hasPrefix(name, 'e_') || hasPrefix(name, 'set_')
+    // const isEventHandling = (name) => hasPrefix(name, 'e_') || hasPrefix(name, 'set_')
     const addProps = (attr) => {
         let value = this.props[attr]
         // lifecycle hooks are handled elsewhere.
@@ -110,10 +112,15 @@ function render(parentElement, parentComponent) {
         if (hasPrefix(attr, 'on')) {
             return this.addEventListener(attr.slice(2), value)
         }
+
+        // With the this.update() function, we should be able to handle all emits within it with no need for another function
+        // ------------
         // is emit handler (custom event handler)
-        if (isEventHandling(attr)) {
-            return this.addEmitHandler(attr, value)
-        }
+        // if (isEventHandling(attr)) {
+        //     return this.addEmitHandler(attr, value)
+        // }
+        // ----------------
+
         // TODO: This should probably only be happening when we are directly wrapping an element, and not when we are in a component.
         this.setAttribute(attr, value)
     }
@@ -135,17 +142,17 @@ function setAttribute(attributeName, value) {
         this.props[attributeName] = value
         return
     }
-    if (attributeName === "children") {
-        return
-    }
+    // if (attributeName === "children") {
+    //     return
+    // }
     // Rethink the whole define pattern.
-    define(this, name, value)
+    elementDefine(this, name, value)
 }
 
 
 function renderChildren(parentElement, parentComponent) {
     if (isFunction(this.content)) {
-        this.props.children = [this.content(this.props, this.follow, this.update)]
+        this.props.children = [this.content(this.props, this.follow(this.props), this.update)]
     }
     return this.props.children.map((child) => {
         if (!child.render) { 
@@ -153,6 +160,15 @@ function renderChildren(parentElement, parentComponent) {
         }
         return child.mount(parentElement, parentComponent)
     })
+}
+
+function follow(props) {
+    return (key) => {
+        return {
+            // setter: elementDefine(this, key, props[key]),
+            // innerValue: "TODO_FIGURE_OUT_WHAT_WE_WANT_THE_FOLLOW_TO_LOOK_LIKE",
+        }
+    }
 }
 
 /**
@@ -188,20 +204,20 @@ function remove() {
 }
 
 // We Should probably just completely get rid of emitting.
-function emit(name) {
-    const eName = `on${capitalCase(name)}`
-    const params = Array.from(arguments)
-    const parentComponent = this.parentComponent || {props: {}}
-    const func = parentComponent[eName] || parentComponent.props[eName]
-    debugger
-    if (func) {
-        return func.apply(parentComponent, params.slice(1))
-    }
-}
+// function emit(name) {
+//     const eName = `on${capitalCase(name)}`
+//     const params = Array.from(arguments)
+//     const parentComponent = this.parentComponent || {props: {}}
+//     const func = parentComponent[eName] || parentComponent.props[eName]
+//     debugger
+//     if (func) {
+//         return func.apply(parentComponent, params.slice(1))
+//     }
+// }
 
-function addEmitHandler(name, handler) {
-    this[name] = handler
-}
+// function addEmitHandler(name, handler) {
+//     this[name] = handler
+// }
 
 function commitLifecycleEvent(context, eventName) {
     let event =  context[eventName] || context.props[eventName]
@@ -217,35 +233,14 @@ function commitLifecycleEvent(context, eventName) {
  * @param {string} key
  * @param {any} value -- initial value
  */
-function define(obj, key, value) {
+function elementDefine(obj, key, value) {
+    // TODO: We should rethink all of this with the update pattern
     let mKey = MAPPED_ATTRIBUTES[key] || key,
-        isVirtual = hasPrefix(key, 'v_'),
-        isPrivate = hasPrefix(key, '_'),
         elem = obj.element
-    if (isPrivate) {
-        obj[mKey] = value
-        return value
-    }
     var settings = {
       set: (val, override) => {
         if (value === val && !override) { return }
-
-        if (isVirtual) {
-            // TODO: Make sure we only propogate to children within the component wall
-            // Think through the idea of a follow prop from the parent component that will update consistently, but only when the parent changes.
-            let getChildren = (p) => (p.renderedChildren || []).reduce((arr, next) => {
-                return arr.concat([next], getChildren(next))
-            },[])
-            getChildren(obj).forEach((child) => {
-                if (!child.hasOwnProperty(key)) { return }
-
-                child[key] = val
-                let setFuncName = key.replace('v_', 'set_')
-                if (child[setFuncName]) {
-                    child[setFuncName].apply(child, [val])
-                }
-            })
-        } else if (DIRECT_SET_ATTRIBUTES[key] || isBool(val)) {
+        if (DIRECT_SET_ATTRIBUTES[key] || isBool(val)) {
             obj.setProp(key, val)
         } else {
             elem.setAttribute(key, val)
