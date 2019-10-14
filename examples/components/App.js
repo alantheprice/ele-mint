@@ -1,4 +1,4 @@
-import { register, Component } from '../../src/eleMint'
+import { register, Component } from '../../src/eleMint2'
 import Card from './Card';
 const div = register('div'),
   button = register('button'),
@@ -11,34 +11,23 @@ const div = register('div'),
   textarea = register('textarea'),
   style = register("style")
 
-const notes = [
-  {
-    date: new Date().toISOString(),
-    message: "I really enjoyed this going here. The food was good, and relatively quick, the server was attentive, but not stiffling. This might become my standby."
-  },
-  {
-    date: new Date().toISOString(),
-    message: "I really enjoyed this going here. The food was good, and relatively quick, the server was attentive, but not stiffling. This might become my standby."
-  }
-]
+const Note = register((props, update) => {
 
-const Note = (note) => (
-  Card(
+  return Card(
     div(
-      h5(note.date)
+      h5(props.note.date)
     ),
     p({class: "padding--vertical"},
-      note.message
+      props.note.message
     ),
   )
-)
+})
 
 class App extends Component {
   constructor(props) {
     props.v_text = ""
     super(props)
     setTimeout(() => {
-      process.env
       console.log(this)
     }, 4000)
   }
@@ -48,8 +37,14 @@ class App extends Component {
    * Or possibly, we don't even need them if we don't need to notify up the stack at all? I want to rethink this, 
    * but I am definitely tempted to keep them in to make it easier to do internal eventing.
   */
-  e_notify(notifyText) {
+  onNotify(notifyText) {
     this.v_text = notifyText
+  }
+
+  getClearHandler() {
+    return (ev, elem, context) => {
+      this.v_text = notifyText
+    }
   }
 
   /**
@@ -59,7 +54,7 @@ class App extends Component {
    * or just update.
    */
 
-  content() {
+  content(props, follow, update) {
     return (
       div({class: "page"},
         // TODO: Here we can build and test the idea of a follow prop. this works, but it's ugly...
@@ -69,39 +64,41 @@ class App extends Component {
             p("a bunch of rando contents that could easily be written out with better clarity.")
         ),
         Card(
-          h3("Edit Note"),
-          textarea({class: "margin--vertical text-area"}),
-          div({class: "flx flx--space-btw"},
-            button("Save Note"),
-            button("Delete Note")
+          Card(
+            Card(
+              h3("Edit Note"),
+              textarea({class: "margin--vertical text-area"}),
+              div({class: "flx flx--space-btw"},
+                button("Save Note"),
+                button("Delete Note")
+              )
+            )
           )
         ),
         h3("Notes"),
         div(
-          notes.map(Note)
+          props.notes.map((note) => Note({note: note}))
         ),
-        Card(
-          h3({
-              v_text:"",
-              set_text: function(text) {this.elem.innerText = text}
-            },
-            this.props.v_text
-          ),
-          input({
+        h3({
             v_text:"",
-            set_text: function(text) {this.elem.value = text},
-            placeholder: "enter something here.",
-            oninput: (ev, elem, context) => {
-              context.emit("notify", elem.value)
-            }
-          }),
-          button({
-            onclick: (ev, elem, context) => {
-              context.emit("notify", "")
-            }
+            set_text: function(text) {this.element.innerText = text}
           },
-          "CLEAR"
-          ),
+          
+          props.v_text
+        ),
+        input({
+          v_text:"",
+          set_text: function(text) {this.element.value = text},
+          placeholder: "enter something here.",
+          oninput: (ev, elem, context) => {
+            context.emit("notify", elem.value)
+          },
+          value: follow("titleText")
+        }),
+        button({
+          onclick: this.getClickHandler()
+        },
+        "CLEAR"
         ),
         style(`
           :root {

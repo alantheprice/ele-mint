@@ -11,9 +11,20 @@ const prototypeFuncs = {
         'renderChildren': renderChildren,
         'render': render,
         'remove': remove,
-        'emit': emit,
+        // 'emit': emit,
+        // TODO: Define and manage updates
+        'update': () => {},
+        'follow': (key) => {},
         'mount': mount
     }
+const hasPrefix = (name, prefix) => name.slice(0, prefix.length) === prefix
+const keys = obj => Object.keys(obj)
+const isType = type => val => typeof val === type
+const capitalCase = str => str.slice(0, 1).toUpperCase() + str.slice(1) 
+// TODO: this probably isn't really sufficient, but works in a pinch
+const isClass = (func) => Object.getOwnPropertyNames(func).length === 3
+// const isPrototypeFunction = (func) => Object.getOwnPropertyNames(func).includes('arguments')
+// const hadPrototype = (func) => Object.getOwnPropertyNames(func).includes('prototype')
 const LIFECYCLE_HOOKS = ['onRender', 'onAttach', 'onDestroy']
 const LIFECYCLE_EVENTS_RENDER = LIFECYCLE_HOOKS[0]
 const LIFECYCLE_EVENTS_ATTACH = LIFECYCLE_HOOKS[1]
@@ -44,24 +55,34 @@ const isFunction = isType('function')
  *
  * @param {*} props
  */
-export const Component = function(props) { this.props = props }
+export const Component = function(props, tagName, overrides) { 
+    this.props = props
+    this.tagName = tagName
+    this.isVirtual = !this.tagName
+    if (overrides) {
+        assign(this, overrides)
+    }
+}
 
 // pipe renderer functions to prototype.
 keys(prototypeFuncs).forEach((key) => Component.prototype[key] = prototypeFuncs[key])
 
 function addEventListener(evName, handler) {
-    this.elem.addEventListener(evName, (ev) => { handler.apply(this, [ev, this.elem, this])})
+    if (this.isVirtual) {
+        return
+    }
+    this.element.addEventListener(evName, (ev) => { handler.apply(this, [ev, this.element, this])})
 }
 
 function setProp(name, value) {
-    this.elem[name] = value
+    this.element[name] = value
 }
 
-function mount(parentElement) {
-    let c = this.render(parentElement) 
+function mount(parentElement, parentComponent) {
+    let c = this.render(parentElement, parentComponent) 
     this.handle = this.handle || this.props.id || this.props._id || Symbol(c.tagName || "v")
-    if (c.elem) {
-        c.elem.remove = c.remove
+    if (c.element) {
+        c.element.remove = c.remove
     }
     handles[this.handle] = c
     return c
@@ -74,13 +95,12 @@ function mount(parentElement) {
  * @param {HTMLElement} parentElement
  * @returns {any}
  */
-function render(parentElement) {
+function render(parentElement, parentComponent) {
     let elem = this.attach(parentElement)
-    // TODO: we shouldn't really be setting an element unless it is directly wrapping an element.
-    this.elem = elem
-    this.element = elem
+    this.parentComponent = parentComponent
+    this.element = this.isVirtual ? null : elem
     commitLifecycleEvent(this, LIFECYCLE_EVENTS_ATTACH)
-    this.renderedChildren = this.renderChildren(elem)
+    this.renderedChildren = this.renderChildren(elem, this.isVirtual ? this : parentComponent)
     const isEventHandling = (name) => hasPrefix(name, 'e_') || hasPrefix(name, 'set_')
     const addProps = (attr) => {
         let value = this.props[attr]
@@ -97,11 +117,6 @@ function render(parentElement) {
         // TODO: This should probably only be happening when we are directly wrapping an element, and not when we are in a component.
         this.setAttribute(attr, value)
     }
-    Object.getOwnPropertyNames(this.props.__proto__).forEach(name => {
-        if(isEventHandling(name)) {
-            this.addEmitHandler(name, this.props[name])
-        }
-    })
     keys(this.props).forEach(addProps)
 
     commitLifecycleEvent(this, LIFECYCLE_EVENTS_RENDER)
@@ -116,7 +131,7 @@ function render(parentElement) {
  */
 function setAttribute(attributeName, value) {
     let name = MAPPED_ATTRIBUTES[attributeName] || attributeName
-    if (!this.elem) {
+    if (!this.element) {
         this.props[attributeName] = value
         return
     }
@@ -128,16 +143,15 @@ function setAttribute(attributeName, value) {
 }
 
 
-function renderChildren(parentElement) {
+function renderChildren(parentElement, parentComponent) {
     if (isFunction(this.content)) {
-        this.props.children = [this.content()]
+        this.props.children = [this.content(this.props, this.follow, this.update)]
     }
     return this.props.children.map((child) => {
         if (!child.render) { 
             error("child must have render function") 
         }
-        child.parent = this
-        return child.mount(parentElement)
+        return child.mount(parentElement, parentComponent)
     })
 }
 
@@ -151,7 +165,7 @@ function renderChildren(parentElement) {
 function attach(parentElement) {
     this.parentElement = parentElement
     // if a virtual element, tagName is not defined, thus, element should pass through
-    let element = this.tagName ? this.elem : this.parentElement
+    let element = this.tagName ? this.element : this.parentElement
     if (!element) {
         element = document.createElement(this.tagName)
         parentElement.appendChild(element)
@@ -164,23 +178,24 @@ function remove() {
     this.renderedChildren.forEach(c => c.remove())
     handles[this.handle] = null
     let ep = this.parentElement;
-    if (ep && ep !== this.elem) {
-        ep.removeChild(this.elem)
+    if (ep && ep !== this.element) {
+        ep.removeChild(this.element)
     }
-    this.parent = null
+    this.element = null
+    this.parentComponent = null
     this.parentElement = null
     commitLifecycleEvent(this, LIFECYCLE_EVENTS_DESTROY)
 }
 
+// We Should probably just completely get rid of emitting.
 function emit(name) {
-    if (!this.parent) { return }
-    let eName = `e_${name}`
-    let params = Array.from(arguments)
-    if (this.parent[eName]) {
-        this.parent[eName].apply(this.parent, params.slice(1))
-    }
-    if (this.parent.emit) { 
-        this.parent.emit.apply(this.parent, params)
+    const eName = `on${capitalCase(name)}`
+    const params = Array.from(arguments)
+    const parentComponent = this.parentComponent || {props: {}}
+    const func = parentComponent[eName] || parentComponent.props[eName]
+    debugger
+    if (func) {
+        return func.apply(parentComponent, params.slice(1))
     }
 }
 
@@ -206,7 +221,7 @@ function define(obj, key, value) {
     let mKey = MAPPED_ATTRIBUTES[key] || key,
         isVirtual = hasPrefix(key, 'v_'),
         isPrivate = hasPrefix(key, '_'),
-        elem = obj.elem
+        elem = obj.element
     if (isPrivate) {
         obj[mKey] = value
         return value
@@ -250,7 +265,6 @@ function define(obj, key, value) {
  * Returns a function closure for building different html elements.
  * 
  * @param {string|Function} tagNameOrComponent 
- * @param {any} [overrides] 
  * @returns 
  */
 export function register(tagNameOrComponent, overrides) {
@@ -265,7 +279,6 @@ export function register(tagNameOrComponent, overrides) {
      * @returns {FunDom}
      */
     return function construct(attributes) {
-
         attributes = attributes || {}
         let children = Array.from(arguments).slice(1)
         if (attributes.render || Array.isArray(attributes) && attributes[0].render) {
@@ -278,18 +291,13 @@ export function register(tagNameOrComponent, overrides) {
             children = children.slice(1)
         }
         const props =  assign(attributes || {}, {children: [].concat.apply([], children)})
-        // If tagNameOrComponent is a function, it is 
-        if (isFunction(tagNameOrComponent)) {
-            if (tagNameOrComponent.constructor) {
-                return new tagNameOrComponent(props)
-            }
-            tagNameOrComponent.prototype = assign(Component.prototype, tagNameOrComponent.prototype, overrides)
-            return tagNameOrComponent(props)
+        if (isString(tagNameOrComponent)) {
+            return new Component(props, tagNameOrComponent)
         }
-        return assign({
-            tagName: tagNameOrComponent,
-            props: props
-        }, Component.prototype, overrides)
+        if (isClass(tagNameOrComponent)) {
+            return new tagNameOrComponent(props)
+        }
+        return new Component(props, null, {content: tagNameOrComponent})
     }
 }
 
@@ -311,25 +319,10 @@ export const e = register
 export const getHandle = id => handles[id]
 
 /** Util Functions */
-
-function keys(obj) {
-    return Object.keys(obj)
-}
-
 function assign() {
     return Object.assign.apply(null, Array.from(arguments))
 }
 
-function hasPrefix(name, prefix) {
-    return name.slice(0, prefix.length) === prefix
-}
-
 function error(message) {
     throw new Error(message)
-}
-
-function isType(type) {
-    return function(val) {
-        return typeof val === type
-    }
 }

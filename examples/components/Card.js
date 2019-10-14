@@ -1,14 +1,5 @@
-import { register, Component } from '../../src/eleMint'
+import { register } from '../../src/eleMint2'
 const section = register('section');
 
-class Card extends Component {
-    content() {
-        return (
-            section({class: "card flx flx--column"},
-                this.props.children,
-            )
-        )
-    }
-}
-
-export default register(Card)
+export default register((props) => 
+    section({class: "card flx flx--column"}, props.children))

@@ -1,7 +1,7 @@
 const path = require('path')
 
 module.exports = {
-    entry: "./src/eleMint.js",
+    entry: "./src/eleMint2.js",
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: "eleMint.min.js",
