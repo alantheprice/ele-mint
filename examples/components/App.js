@@ -11,8 +11,10 @@ const div = register('div'),
   textarea = register('textarea'),
   style = register("style")
 
-const Note = register((props, update) => {
-
+const Note = register((props) => {
+  if (!props.showNotes) {
+    return null
+  }
   return Card(
     div(
       h5(props.note.date)
@@ -26,7 +28,10 @@ const Note = register((props, update) => {
 class App extends Component {
   constructor(props) {
     props.titleText = ""
-    super(props)
+    super(props, {
+      titleText: "",
+      notesToggleButtonText: "SHOW NOTES"
+    })
   }
 
   /**
@@ -36,13 +41,9 @@ class App extends Component {
    * We should move to an "update function pattern" which handles eventing without having to explicitly call emit.
   */
   onNotify(notifyText) {
-    this.titleText = notifyText
-  }
-
-  getClearHandler() {
-    return (ev, elem, context) => {
-      this.titleText = notifyText
-    }
+    this.update({
+      titleText: notifyText
+    })
   }
 
   /**
@@ -52,19 +53,44 @@ class App extends Component {
    * or just update.
    */
 
-  content(props, follow, update) {
+  content(props, update) {
+    console.log('titleText:', props.titleText)
+    // setTimeout(() => {
+    //   update({titleText: Math.random().toString()})
+    // }, 3000)
     return (
       div({class: "page"},
-        // TODO: Here we can build and test the idea of a follow prop. this works, but it's ugly...
-        h1("Testing!"),
-        div({class: "test"}, "something"),
+        // h1("Testing!"),
+        div({class: "test"}, props.titleText),
         Card(
             p("a bunch of rando contents that could easily be written out with better clarity.")
         ),
         Card(
+          textarea({
+            placeholder: "enter something here.",
+            oninput: (ev, elem, context) => {
+              update({
+                titleText: elem.value
+              })
+            },
+            value: props.titleText
+          }),
+          button(
+            {
+              onclick: () => update({
+                titleText: ""
+              })
+            },
+            "CLEAR"
+          ),
+          h3(
+            props.titleText
+          ),
+        ),
+        Card(
           Card(
             Card(
-              h3("Edit Note"),
+              h3("New Note"),
               textarea({class: "margin--vertical text-area"}),
               div({class: "flx flx--space-btw"},
                 button("Save Note"),
@@ -74,32 +100,25 @@ class App extends Component {
           )
         ),
         h3("Notes"),
+        button(
+          {
+            onclick: () => update({
+              showNotes: !props.showNotes,
+              notesToggleButtonText: props.showNotes ? "SHOW NOTES" : "HIDE NOTES"
+            })
+          },
+          props.notesToggleButtonText
+        ),
         div(
-          props.notes.map((note) => Note({note: note}))
-        ),
-        h3({
-            // v_text:"",
-            // set_text: function(text) {this.element.innerText = text}
-          },
-          props.titleText
-        ),
-        input({
-          // v_text:"",
-          // set_text: function(text) {this.element.value = text},
-          placeholder: "enter something here.",
-          oninput: (ev, elem, context) => {
-            context.emit("notify", elem.value)
-          },
-          value: follow("titleText")
-        }),
-        button({
-          onclick: this.getClearHandler()
-        },
-        "CLEAR"
+          props.notes.map((note) => Note({note: note, showNotes: props.showNotes}))
         ),
         style(`
           :root {
             --padding: 10px;
+          }
+          body {
+            margin: 0;
+            font-family: Helvetica, Arial, san-serif;
           }
           
           .flx {
@@ -150,7 +169,6 @@ class App extends Component {
             width: 100%;
             margin-bottom: 20px;
           }
-          
         `)
       )
     )
