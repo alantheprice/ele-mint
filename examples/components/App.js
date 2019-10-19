@@ -25,6 +25,65 @@ const Note = register((props) => {
   )
 })
 
+const styles = () => style(`
+  :root {
+    --padding: 10px;
+  }
+  body {
+    margin: 0;
+    font-family: Helvetica, Arial, san-serif;
+  }
+  
+  .flx {
+    width: 100%;
+    display: flex;
+  }
+  .flx--column {
+    flex-direction: column;
+  }
+  .flx--space-btw {
+    justify-content: space-between;
+  }
+
+  .padding {
+    padding: var(--padding);
+  }
+  .padding--horizontal {
+    padding-left: var(--padding);
+    padding-right: var(--padding);
+  }
+  .padding--vertical {
+    padding-top: var(--padding);
+    padding-bottom: var(--padding);
+  }
+
+  .margin {
+    margin: var(--padding);
+  }
+  .margin--vertical {
+    margin-top: var(--padding);
+    margin-bottom: var(--padding);
+  }
+
+  /** components */
+
+  .page {
+    padding: 20px;
+  }
+  .card {
+    box-shadow: 3px 3px 10px rgba(80, 80, 80, .3);
+    border: 1px solid #CCC; 
+    padding: 20px; 
+    margin: 20px 0;
+    border-radius: 5px;
+  }
+  .text-area {
+    height:180px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+`)
+
 class App extends Component {
   constructor(props) {
     props.titleText = ""
@@ -60,7 +119,7 @@ class App extends Component {
     // }, 3000)
     return (
       div({class: "page"},
-        // h1("Testing!"),
+        h1("Testing!"),
         div({class: "test"}, props.titleText),
         Card(
             p("a bunch of rando contents that could easily be written out with better clarity.")
@@ -112,64 +171,7 @@ class App extends Component {
         div(
           props.notes.map((note) => Note({note: note, showNotes: props.showNotes}))
         ),
-        style(`
-          :root {
-            --padding: 10px;
-          }
-          body {
-            margin: 0;
-            font-family: Helvetica, Arial, san-serif;
-          }
-          
-          .flx {
-            width: 100%;
-            display: flex;
-          }
-          .flx--column {
-            flex-direction: column;
-          }
-          .flx--space-btw {
-            justify-content: space-between;
-          }
-
-          .padding {
-            padding: var(--padding);
-          }
-          .padding--horizontal {
-            padding-left: var(--padding);
-            padding-right: var(--padding);
-          }
-          .padding--vertical {
-            padding-top: var(--padding);
-            padding-bottom: var(--padding);
-          }
-
-          .margin {
-            margin: var(--padding);
-          }
-          .margin--vertical {
-            margin-top: var(--padding);
-            margin-bottom: var(--padding);
-          }
-
-          /** components */
-
-          .page {
-            padding: 20px;
-          }
-          .card {
-            box-shadow: 3px 3px 10px rgba(80, 80, 80, .3);
-            border: 1px solid #CCC; 
-            padding: 20px; 
-            margin: 20px 0;
-            border-radius: 5px;
-          }
-          .text-area {
-            height:180px;
-            width: 100%;
-            margin-bottom: 20px;
-          }
-        `)
+        styles()
       )
     )
   }

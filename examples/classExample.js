@@ -12,7 +12,7 @@ const notes = [
 ]
 
 function test() {
-  App({notes: notes}).mount(document.body)
+  App({notes: notes}).mount(document.getElementsByClassName("mount-point")[0])
 }
 
 // Start this bugger

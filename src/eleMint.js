@@ -47,7 +47,6 @@ const compareObj = (val, val2, name, obj, obj2) => {
         return true
     }
     if (typeof val !== typeof val2) {
-        debugger
         console.log(name, "typeof", false)
         return false
     }
@@ -55,7 +54,6 @@ const compareObj = (val, val2, name, obj, obj2) => {
     if (isFunction(val)) {
         return true
     } else if (Array.isArray(val)) {
-        debugger
         return Array.isArray(val2) && 
             val.reduce(
                 (bool, next, index) => bool && compareObj(next, val2[index], `${name}[${index}]`),
@@ -238,7 +236,6 @@ function compareElement(comp) {
 }
 
 function renderChildren(parentElement, parentComponent) {
-    runContentFunc(this)
     let previouslyRendered = this.renderedChildren
     let getExisting = (index) =>  previouslyRendered ? previouslyRendered[index] : null
 
@@ -328,6 +325,7 @@ function runContentFunc(comp) {
                 (obj) => comp.update(obj)
             )]
     }
+    return comp
 }
 
 /**
@@ -342,6 +340,8 @@ export function register(tagNameOrComponent, overrides) {
     }
 
     const construct = (...attributes) => {
+        // TODO: Since attributes is an array, we could reduce our way to success.
+        // debugger
         let attr = attributes[0] || {}
         let children = attributes.slice(1)
         if (Array.isArray(attributes[0])) {
@@ -351,6 +351,7 @@ export function register(tagNameOrComponent, overrides) {
             attr = {textContent: attributes[0]}
         } else if (attributes[0].render) {
             children.unshift(attributes[0])
+            attr = {}
         }
         if (isString(children[0])) {
             attr.textContent = children[0]
@@ -359,7 +360,7 @@ export function register(tagNameOrComponent, overrides) {
         if (Array.isArray(children[0])) {
             children = children[0]
         }
-        const props =  assign(attr, {children: children})
+        const props =  assign({}, attr, {children: children})
         if (isString(tagNameOrComponent)) {
             return createElementComponent(props, tagNameOrComponent, overrides)
         }
@@ -376,8 +377,7 @@ export function register(tagNameOrComponent, overrides) {
      * @returns {FunDom}
      */
     return function build(...attributes) {
-        const comp = construct(...attributes)
-        return comp
+        return runContentFunc(construct(...attributes))
     }
 }
 
@@ -393,8 +393,6 @@ export function override(overrides) {
         return register(tagName, assign({}, overrides, secondaryOverride))
     }
 }
-
-// export const getHandle = id => handles[id]
 
 /** Util Functions */
 function assign() {
