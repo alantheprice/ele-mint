@@ -59,7 +59,6 @@ const compareObj = (val, val2, name, obj, obj2) => {
                 (bool, next, index) => bool && compareObj(next, val2[index], `${name}[${index}]`),
              true)
     } else if (isObject(val)) {
-        debugger
         const comparison = compare(val, val2)
         return keys(val).reduce((bool, key) => bool && comparison(key, [name,key].join('.')), true)
     }
@@ -70,11 +69,11 @@ const compareObj = (val, val2, name, obj, obj2) => {
 const compare = (obj, obj2) => (name, keyName) => {
     // lets ignore the recursive items and unique handle
     if(ignoreCompare.includes(name) || (isNull(obj) && isNull(obj2))) {
-        console.log(keyName, true)
+        console.log("ignored: ", keyName, true)
         return true
     }
     if (isNull(obj) || isNull(obj2)) {
-        console.log(keyName, false)
+        console.log("one null: ", keyName, false)
         return false
     }
     return compareObj(obj[name], obj2[name], keyName || name, obj, obj2)
@@ -219,20 +218,10 @@ function setAttribute(attributeName, value) {
  */
 function compareElement(comp) {
     const comparison = compare(this, comp)
-    const identical = keys(this).reduce((match, key) => match && comparison(key), true)
-    const compared = {
-        identical: identical,
+    return {
+        identical: keys(this).reduce((match, key) => match && comparison(key), true),
         reusable: comparison('tagName')
     }
-    window.equality = window.equality || []
-    // const getParent = (obj) => obj.parentElement ? getParent(obj.parentElement)
-    // let parents = getParent(this)
-
-    window.equality.push({name: `${(this.parentElement || {}).tagName}.${(this.element || {}).tagName}: ${compared.identical}`, element: this.element })
-    // console.log(`equal: ${compared.identical}, ${this.tagName}`)
-    // console.log('current:', this)
-    // console.log('next:', comp)
-    return compared
 }
 
 function renderChildren(parentElement, parentComponent) {
@@ -284,10 +273,10 @@ function update(obj) {
         }
         return agg
     }, this.props)
-
     if (didUpdate) {
         // Using a settimeout to allow this to be asynchrous
         setTimeout(() => { 
+            runContentFunc(this)
             this.renderedChildren = this.renderChildren(this.element || this.parentElement, this)
         })
     }
@@ -341,7 +330,6 @@ export function register(tagNameOrComponent, overrides) {
 
     const construct = (...attributes) => {
         // TODO: Since attributes is an array, we could reduce our way to success.
-        // debugger
         let attr = attributes[0] || {}
         let children = attributes.slice(1)
         if (Array.isArray(attributes[0])) {
