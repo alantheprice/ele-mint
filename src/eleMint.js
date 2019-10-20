@@ -42,7 +42,7 @@ const ignoreCompare = [
     'externalProps',
     'internalProps'
 ]
-const compareObj = (val, val2, name, obj, obj2) => {
+const compareObjDetails = (val, val2, name, obj, obj2) => {
     if (isNull(val) && isNull(val2)){
         return true
     }
@@ -56,17 +56,18 @@ const compareObj = (val, val2, name, obj, obj2) => {
     } else if (Array.isArray(val)) {
         return Array.isArray(val2) && 
             val.reduce(
-                (bool, next, index) => bool && compareObj(next, val2[index], `${name}[${index}]`),
+                (bool, next, index) => bool && compareObjDetails(next, val2[index], `${name}[${index}]`),
              true)
     } else if (isObject(val)) {
-        const comparison = compare(val, val2)
+        const comparison = compareDetails(val, val2)
         return keys(val).reduce((bool, key) => bool && comparison(key, [name,key].join('.')), true)
     }
     const equal = val === val2
     console.log(name, equal)
     return equal
 }
-const compare = (obj, obj2) => (name, keyName) => {
+
+const compareDetails = (obj, obj2) => (name, keyName) => {
     // lets ignore the recursive items and unique handle
     if(ignoreCompare.includes(name) || (isNull(obj) && isNull(obj2))) {
         console.log("ignored: ", keyName, true)
@@ -76,7 +77,39 @@ const compare = (obj, obj2) => (name, keyName) => {
         console.log("one null: ", keyName, false)
         return false
     }
-    return compareObj(obj[name], obj2[name], keyName || name, obj, obj2)
+    return compareObjDetails(obj[name], obj2[name], keyName || name, obj, obj2)
+}
+
+const compareObj = (val, val2, name) => {
+    if (isNull(val) && isNull(val2)){
+        return true
+    }
+    if (typeof val !== typeof val2) {
+        return false
+    }
+    // ignoring functions for equality
+    if (isFunction(val)) {
+        return true
+    } else if (Array.isArray(val)) {
+        return Array.isArray(val2) && 
+            val.reduce(
+                (bool, next, index) => bool && compareObj(next, val2[index]), true)
+    } else if (isObject(val)) {
+        const comparison = compare(val, val2)
+        return keys(val).reduce((bool, key) => bool && comparison(key), true)
+    }
+    const equal = val === val2
+    return equal
+}
+const compare = (obj, obj2) => (name, keyName) => {
+    // lets ignore the recursive items and unique handle
+    if(ignoreCompare.includes(name) || (isNull(obj) && isNull(obj2))) {
+        return true
+    }
+    if (isNull(obj) || isNull(obj2)) {
+        return false
+    }
+    return compareObj(obj[name], obj2[name])
 }
 
 // Base

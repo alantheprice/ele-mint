@@ -114,63 +114,61 @@ class App extends Component {
 
   content(props, update) {
     console.log('titleText:', props.titleText)
-    setTimeout(() => {
-      update({titleText: Math.random().toString()})
-    }, 3000)
+
     return (
       div({class: "page"},
-        // h1("Testing!"),
+        h1("Testing!"),
         div({class: "test"}, props.titleText),
-        // Card(
-        //     p("a bunch of rando contents that could easily be written out with better clarity.")
-        // ),
-        // Card(
-        //   textarea({
-        //     placeholder: "enter something here.",
-        //     oninput: (ev, elem, context) => {
-        //       update({
-        //         titleText: elem.value
-        //       })
-        //     },
-        //     value: props.titleText
-        //   }),
-        //   button(
-        //     {
-        //       onclick: () => update({
-        //         titleText: ""
-        //       })
-        //     },
-        //     "CLEAR"
-        //   ),
-        //   h3(
-        //     props.titleText
-        //   ),
-        // ),
-        // Card(
-        //   Card(
-        //     Card(
-        //       h3("New Note"),
-        //       textarea({class: "margin--vertical text-area"}),
-        //       div({class: "flx flx--space-btw"},
-        //         button("Save Note"),
-        //         button("Delete Note")
-        //       )
-        //     )
-        //   )
-        // ),
-        // h3("Notes"),
-        // button(
-        //   {
-        //     onclick: () => update({
-        //       showNotes: !props.showNotes,
-        //       notesToggleButtonText: props.showNotes ? "SHOW NOTES" : "HIDE NOTES"
-        //     })
-        //   },
-        //   props.notesToggleButtonText
-        // ),
-        // div(
-        //   props.notes.map((note) => Note({note: note, showNotes: props.showNotes}))
-        // ),
+        Card(
+            p("a bunch of rando contents that could easily be written out with better clarity.")
+        ),
+        Card(
+          textarea({
+            placeholder: "enter something here.",
+            oninput: (ev, elem, context) => {
+              update({
+                titleText: elem.value
+              })
+            },
+            value: props.titleText
+          }),
+          button(
+            {
+              onclick: () => update({
+                titleText: ""
+              })
+            },
+            "CLEAR"
+          ),
+          h3(
+            props.titleText
+          ),
+        ),
+        Card(
+          Card(
+            Card(
+              h3("New Note"),
+              textarea({class: "margin--vertical text-area"}),
+              div({class: "flx flx--space-btw"},
+                button("Save Note"),
+                button("Delete Note")
+              )
+            )
+          )
+        ),
+        h3("Notes"),
+        button(
+          {
+            onclick: () => update({
+              showNotes: !props.showNotes,
+              notesToggleButtonText: props.showNotes ? "SHOW NOTES" : "HIDE NOTES"
+            })
+          },
+          props.notesToggleButtonText
+        ),
+        div(
+          props.notes.map((note) => Note({note: note, showNotes: props.showNotes}))
+        ),
         styles()
       )
     )
