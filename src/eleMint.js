@@ -3,41 +3,22 @@ import { error, keys, assign, isFunction, isBool, isString, isArray, isClass, de
 import { attach } from './attach';
 import { addEventListener } from './eventListener';
 import { render } from './render';
+import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, renderedChildren, parentComponent, parentElement, subscribedEvents } from './nameMapping';
 
 const MAPPED_ATTRIBUTES = { class: 'className' }
 const DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|style|checked|selected|src|srcdoc|srcset|tabindex|target'.split('|')
         .reduce((agg, next)=> { agg[next] = 1; return agg }, {})
 const handles = {}
 
-/**
- * 
- * mapping: 
- *  * function: 
- *      * _aF: "attach"
- *      * _aelF: "addEventListener"
- *      * _saF: "setAttribute"
- *      * _rcF: "renderChildren"
- *      * _rF: "render"
- *      * _rmF: "remove"
- *      * _ccF: "compareComponent"
- *      * _lF: "commitLifecycleEvents"
- *  * properties:
- *      * _v: "isVirtual"
- *      * _pe: "parentElement"
- *      * _e: "subscribedEvents"
- *      * _pc: "parentComponent"
- *      * _ed: "externalData" (roughly maps to props from react)
- *      * _id: "internalData" (roughly maps to state from react)
- */
 const prototypeFuncs = {
-        '_aF': attach,
-        '_aelF': addEventListener,
-        '_saF': setAttribute,
-        '_rcF': renderChildren,
-        '_rF': render,
-        '_rmF': remove,
-        '_ccF': compareComponent,
-        '_lF': commitLifecycleEvent,
+        [attachFunc]: attach,
+        [addEventListenerFunc]: addEventListener,
+        [setAttributeFunc]: setAttribute,
+        [renderChildrenFunc]: renderChildren,
+        [renderFunc]: render,
+        [removeFunc]: remove,
+        [compareComponentFunc]: compareComponent,
+        [commitLifecycleEventFunc]: commitLifecycleEvent,
         // These two will likely be called by a user and should be sematic
         'update': update,
         'mount': mount,
@@ -67,22 +48,21 @@ const prototypeFuncs = {
 export const Component = function(props, initialProps) { 
     // TODO: We should do some magic here to find out if the prop is passed in, or if it is internal to the class....
     // Then we could figure out if we have to emit to the parent, or just handle internally.
-    this._ed = props
-    // TODO: this can't be _id long term, that will be too confusing
-    this._id = initialProps
-    this.props = assign({}, this._ed, this._id)
-    this._v = true
+    this[externalData] = props
+    this[internalData] = initialProps
+    this.props = assign({}, props, initialProps)
+    this[isVirtual] = true
 }
 const createElementComponent = (props, tagName, overrides) => {
     const comp = new Component(props)
     comp.tagName = tagName
-    comp._v = false
+    comp[isVirtual] = false
     return assign(comp, overrides)
 }
 
 const createComponent = (props, initialProps, overrides) => {
     const comp = new Component(props, initialProps)
-    comp._v = true
+    comp[isVirtual] = true
     return assign(comp, overrides)
 }
 
@@ -91,10 +71,10 @@ keys(prototypeFuncs).forEach((key) => Component.prototype[key] = prototypeFuncs[
 
 
 function mount(parentElement, parentComponent) {
-    let c = this._rF(parentElement, parentComponent) 
+    let c = this[renderFunc](parentElement, parentComponent) 
     this.handle = this.handle || this.props.id || this.props._id || Symbol(c.tagName || 'v')
     if (c.element) {
-        c.element._rmF = c._rmF
+        c.element[removeFunc] = c[removeFunc]
     }
     handles[this.handle] = c
     return c
@@ -133,7 +113,7 @@ function compareComponent(comp) {
 }
 
 function renderChildren(parentElement, parentComponent) {
-    let previouslyRendered = this._rc
+    let previouslyRendered = this[renderedChildren]
     let getExisting = (index) =>  previouslyRendered ? previouslyRendered[index] : null
     // The additional thing we need to consider if allowing a child to keep their state values 
     // rather than just overriding them..., but maybe that doesn't make sense.
@@ -151,13 +131,13 @@ function renderChildren(parentElement, parentComponent) {
                 } else if (comparison.reusable) {
                     child.element = current.element
                     // this is set so as we go through the hierarchy everything works
-                    child._rc = current._rc
+                    child[renderedChildren] = current[renderedChildren]
                     // reset values so se can call remove to cleanup
-                    current._rc = []
+                    current[renderedChildren] = []
                     current.element = undefined
                 }
             }
-            if (!child._rF) {
+            if (!child[renderFunc]) {
                 error('child must have render function') 
             }
             return child.mount(parentElement, parentComponent)
@@ -165,8 +145,8 @@ function renderChildren(parentElement, parentComponent) {
     
     if (previouslyRendered) {
         previouslyRendered.forEach((child) => {
-            if (child && child._rmF) {
-                child._rmF()
+            if (child && child[removeFunc]) {
+                child[removeFunc]()
             }
         })
     }
@@ -186,27 +166,27 @@ function update(obj) {
         // Using a settimeout to allow this to be asynchrous
         delay(() => { 
             runContentFunc(this)
-            this._rc = this._rcF(this.element || this._pe, this)
+            this[renderedChildren] = this[renderChildrenFunc](this.element || this._pe, this)
         })
     }
 }
 
 function remove() {
     // 
-    this._lF('onWillRemove')
+    this[commitLifecycleEventFunc]('onWillRemove')
     // for cleanup of handles to eliminate memory leak -- can make the rest of the child cleanup async somehow
-    this._rc.forEach(c => c._rmF())
+    this[renderedChildren].forEach(c => c[removeFunc]())
     handles[this.handle] = null
-    let ep = this._pe;
-    if (this._e) {
-        this._e.forEach((rm) => rm())
+    let ep = this[parentElement];
+    if (this[subscribedEvents]) {
+        this[subscribedEvents].forEach((rm) => rm())
     }
     if (this.element && ep && ep !== this.element) {
-        ep._rmFChild(this.element)
+        ep.removeChild(this.element)
     }
     this.element = null
-    this._pc = null
-    this._pe = null
+    this[parentComponent] = null
+    this[parentElement] = null
 }
 
 function commitLifecycleEvent(eventName) {
@@ -247,7 +227,7 @@ export function register(tagNameOrComponent, overrides) {
             attr = {}
         } else if (isString(attributes[0])) {
             attr = {textContent: attributes[0]}
-        } else if (attributes[0]._rF) {
+        } else if (attributes[0][renderFunc]) {
             children.unshift(attributes[0])
             attr = {}
         }
@@ -259,7 +239,6 @@ export function register(tagNameOrComponent, overrides) {
             children = children[0]
         }
         const props =  assign({}, attr, {children: children})
-        debugger
         if (isString(tagNameOrComponent)) {
             return createElementComponent(props, tagNameOrComponent, overrides)
         }

@@ -1,14 +1,15 @@
-import { isNull, isFunction, isArray, isObject } from "./utils"
+import { isNull, isFunction, isArray, isObject, keys } from "./utils"
+import { parentElement, parentComponent, subscribedEvents, externalData, internalData, renderedChildren } from "./nameMapping"
 
 const ignoreCompare = [
     'element',
-    'parentElement',
-    'parentComponent',
     'handle',
-    'renderedChildren',
-    '_e',
-    'externalProps',
-    'internalProps'
+    [parentElement],
+    [parentComponent],
+    [renderedChildren],
+    [subscribedEvents],
+    [externalData],
+    [internalData]
 ]
 
 // const isObject = isType('object')
