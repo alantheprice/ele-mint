@@ -119,7 +119,7 @@ function getSectionComponent() {
     },
     addEventListener: function (name, handler) {
       console.log('Adding event listener')
-      this.elem.addEventListener(name, (ev) => handler(ev, this.elem))
+      this.elem._aelF(name, (ev) => handler(ev, this.elem))
     }
   })
   let cDiv = customRegister('div')
@@ -168,8 +168,8 @@ function getOverrideEventComponent() {
     addEventListener: function (eventName, handler) {
       // just for fun completely ignoring input event and doing our own thing
       // basically illustrating overriding a part of the rendering pipeline.
-      this.elem.addEventListener('mousedown', ev => handler(ev))
-      this.elem.addEventListener('touchstart', ev => handler(ev))
+      this.elem._aelF('mousedown', ev => handler(ev))
+      this.elem._aelF('touchstart', ev => handler(ev))
     }
   })
 }

@@ -1,116 +1,47 @@
+import { compare } from './comparison';
+import { error, keys, assign, isFunction, isBool, isString, isArray, isClass, delay } from './utils';
+import { attach } from './attach';
+import { addEventListener } from './eventListener';
+import { render } from './render';
+
 const MAPPED_ATTRIBUTES = { class: 'className' }
 const DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|style|checked|selected|src|srcdoc|srcset|tabindex|target'.split('|')
         .reduce((agg, next)=> { agg[next] = 1; return agg }, {})
 const handles = {}
+
+/**
+ * 
+ * mapping: 
+ *  * function: 
+ *      * _aF: "attach"
+ *      * _aelF: "addEventListener"
+ *      * _saF: "setAttribute"
+ *      * _rcF: "renderChildren"
+ *      * _rF: "render"
+ *      * _rmF: "remove"
+ *      * _ccF: "compareComponent"
+ *      * _lF: "commitLifecycleEvents"
+ *  * properties:
+ *      * _v: "isVirtual"
+ *      * _pe: "parentElement"
+ *      * _e: "subscribedEvents"
+ *      * _pc: "parentComponent"
+ *      * _ed: "externalData" (roughly maps to props from react)
+ *      * _id: "internalData" (roughly maps to state from react)
+ */
 const prototypeFuncs = {
-        'attach': attach,
-        'addEventListener': addEventListener,
-        'setAttribute': setAttribute,
-        'renderChildren': renderChildren,
-        'render': render,
-        'remove': remove,
-        'compareElement': compareElement,
-        // TODO: Define and manage updates
+        '_aF': attach,
+        '_aelF': addEventListener,
+        '_saF': setAttribute,
+        '_rcF': renderChildren,
+        '_rF': render,
+        '_rmF': remove,
+        '_ccF': compareComponent,
+        '_lF': commitLifecycleEvent,
+        // These two will likely be called by a user and should be sematic
         'update': update,
-        'mount': mount
+        'mount': mount,
     }
-const hasPrefix = (name, prefix) => name.slice(0, prefix.length) === prefix
-const keys = obj => Object.keys(obj)
-const isType = type => val => typeof val === type
-// const capitalCase = str => str.slice(0, 1).toUpperCase() + str.slice(1) 
-// TODO: this probably isn't really sufficient, but works in a pinch
-const isClass = (func) => Object.getOwnPropertyNames(func).length === 3
-// const isPrototypeFunction = (func) => Object.getOwnPropertyNames(func).includes('arguments')
-// const hadPrototype = (func) => Object.getOwnPropertyNames(func).includes('prototype')
-const LIFECYCLE_HOOKS = ['onRender', 'onAttach', 'onDestroy']
-const LIFECYCLE_EVENTS_RENDER = LIFECYCLE_HOOKS[0]
-const LIFECYCLE_EVENTS_ATTACH = LIFECYCLE_HOOKS[1]
-const LIFECYCLE_EVENTS_DESTROY = LIFECYCLE_HOOKS[2]
-const isString = isType('string')
-const isBool = isType('boolean')
-const isFunction = isType('function')
-const isObject = isType('object')
-const isUndefined = isType('undefined')
-const isNull = val => val == null
-const ignoreCompare = [
-    'element',
-    'parentElement',
-    'parentComponent',
-    'handle',
-    'renderedChildren',
-    '_events',
-    'externalProps',
-    'internalProps'
-]
-const compareObjDetails = (val, val2, name, obj, obj2) => {
-    if (isNull(val) && isNull(val2)){
-        return true
-    }
-    if (typeof val !== typeof val2) {
-        console.log(name, "typeof", false)
-        return false
-    }
-    // ignoring functions for equality
-    if (isFunction(val)) {
-        return true
-    } else if (Array.isArray(val)) {
-        return Array.isArray(val2) && 
-            val.reduce(
-                (bool, next, index) => bool && compareObjDetails(next, val2[index], `${name}[${index}]`),
-             true)
-    } else if (isObject(val)) {
-        const comparison = compareDetails(val, val2)
-        return keys(val).reduce((bool, key) => bool && comparison(key, [name,key].join('.')), true)
-    }
-    const equal = val === val2
-    console.log(name, equal)
-    return equal
-}
-
-const compareDetails = (obj, obj2) => (name, keyName) => {
-    // lets ignore the recursive items and unique handle
-    if(ignoreCompare.includes(name) || (isNull(obj) && isNull(obj2))) {
-        console.log("ignored: ", keyName, true)
-        return true
-    }
-    if (isNull(obj) || isNull(obj2)) {
-        console.log("one null: ", keyName, false)
-        return false
-    }
-    return compareObjDetails(obj[name], obj2[name], keyName || name, obj, obj2)
-}
-
-const compareObj = (val, val2, name) => {
-    if (isNull(val) && isNull(val2)){
-        return true
-    }
-    if (typeof val !== typeof val2) {
-        return false
-    }
-    // ignoring functions for equality
-    if (isFunction(val)) {
-        return true
-    } else if (Array.isArray(val)) {
-        return Array.isArray(val2) && 
-            val.reduce(
-                (bool, next, index) => bool && compareObj(next, val2[index]), true)
-    } else if (isObject(val)) {
-        const comparison = compare(val, val2)
-        return keys(val).reduce((bool, key) => bool && comparison(key), true)
-    }
-    const equal = val === val2
-    return equal
-}
-const compare = (obj, obj2) => (name, keyName) => {
-    // lets ignore the recursive items and unique handle
-    if(ignoreCompare.includes(name) || (isNull(obj) && isNull(obj2))) {
-        return true
-    }
-    if (isNull(obj) || isNull(obj2)) {
-        return false
-    }
-    return compareObj(obj[name], obj2[name])
-}
 
 // Base
 /**
@@ -136,95 +67,39 @@ const compare = (obj, obj2) => (name, keyName) => {
 export const Component = function(props, initialProps) { 
     // TODO: We should do some magic here to find out if the prop is passed in, or if it is internal to the class....
     // Then we could figure out if we have to emit to the parent, or just handle internally.
-    this.externalProps = props
-    this.initialProps = initialProps
-    this.props = assign(this.externalProps, this.initialProps)
-    this.isVirtual = true
+    this._ed = props
+    // TODO: this can't be _id long term, that will be too confusing
+    this._id = initialProps
+    this.props = assign({}, this._ed, this._id)
+    this._v = true
 }
 const createElementComponent = (props, tagName, overrides) => {
     const comp = new Component(props)
     comp.tagName = tagName
-    comp.isVirtual = false
+    comp._v = false
     return assign(comp, overrides)
 }
 
 const createComponent = (props, initialProps, overrides) => {
     const comp = new Component(props, initialProps)
-    comp.isVirtual = true
+    comp._v = true
     return assign(comp, overrides)
 }
 
 // pipe renderer functions to prototype.
 keys(prototypeFuncs).forEach((key) => Component.prototype[key] = prototypeFuncs[key])
 
-function addEventListener(evName, handler) {
-    if (this.isVirtual) {
-        return
-    }
-    let handle = (ev) => { handler.apply(this, [ev, elem, this])}
-    let elem = this.element
-    elem.addEventListener(evName, handle)
-    return () => elem.removeEventListener(evName, handle)
-}
 
 function mount(parentElement, parentComponent) {
-    let c = this.render(parentElement, parentComponent) 
+    let c = this._rF(parentElement, parentComponent) 
     this.handle = this.handle || this.props.id || this.props._id || Symbol(c.tagName || 'v')
     if (c.element) {
-        c.element.remove = c.remove
+        c.element._rmF = c._rmF
     }
     handles[this.handle] = c
     return c
 }
 
-/**
- * Attaches the element to the Dom.
- * Could easily be overridden to allow full unit testing 
- * 
- * @param {HTMLElement} parentElement 
- * @returns 
- */
-function attach(parentElement) {
-    this.parentElement = parentElement
-    // if a virtual element, tagName is not defined, thus, element should pass through
-    let element = this.tagName ? this.element : this.parentElement
-    if (!element) {
-        element = document.createElement(this.tagName)
-        parentElement.appendChild(element)
-    }
-    return element
-}
-
-/**
- * Renders the element and children to the DOM
- * Using a prototype function for performance
- * 
- * @param {HTMLElement} parentElement
- * @returns {any}
- */
-function render(parentElement, parentComponent) {
-    let elem = this.attach(parentElement)
-    this.parentComponent = parentComponent
-    this.element = this.isVirtual ? null : elem
-    commitLifecycleEvent(this, LIFECYCLE_EVENTS_ATTACH)
-    this.renderedChildren = this.renderChildren(elem, this.isVirtual ? this : parentComponent)
-    const addProps = (attr, index, arr) => {
-        let value = this.props[attr]
-        // is native event property: 
-        if (hasPrefix(attr, 'on')) {
-            this._events = this._events || []
-            this._events.push(this.addEventListener(attr.slice(2), value))
-            return
-        }
-        this.setAttribute(attr, value)
-    }
-    if (!this.isVirtual) {
-        // only add props for elements
-        keys(this.props).forEach(addProps)
-    }
-    commitLifecycleEvent(this, LIFECYCLE_EVENTS_RENDER)
-    return this
-}
 
 /**
  * Set an attribute on the element
@@ -249,7 +124,7 @@ function setAttribute(attributeName, value) {
  * @param {Component} comp
  * @returns {{identical: boolean, reusable: boolean}}
  */
-function compareElement(comp) {
+function compareComponent(comp) {
     const comparison = compare(this, comp)
     return {
         identical: keys(this).reduce((match, key) => match && comparison(key), true),
@@ -258,30 +133,31 @@ function compareElement(comp) {
 }
 
 function renderChildren(parentElement, parentComponent) {
-    let previouslyRendered = this.renderedChildren
+    let previouslyRendered = this._rc
     let getExisting = (index) =>  previouslyRendered ? previouslyRendered[index] : null
+    // The additional thing we need to consider if allowing a child to keep their state values 
+    // rather than just overriding them..., but maybe that doesn't make sense.
+    // 
 
     let children = this.props.children
         .filter(child => child != null)
         .map((child, index) => {
             let current = getExisting(index)
             if (current) {
-                let comparison = current.compareElement(child)
+                let comparison = current._ccF(child)
                 if (comparison.identical) {
                     previouslyRendered[index] = undefined
                     return current
                 } else if (comparison.reusable) {
                     child.element = current.element
                     // this is set so as we go through the hierarchy everything works
-                    child.renderedChildren = current.renderedChildren
+                    child._rc = current._rc
                     // reset values so se can call remove to cleanup
-                    current.renderedChildren = []
+                    current._rc = []
                     current.element = undefined
                 }
             }
-            if (!child.render) { 
-                let test = this
-                debugger
+            if (!child._rF) {
                 error('child must have render function') 
             }
             return child.mount(parentElement, parentComponent)
@@ -289,8 +165,8 @@ function renderChildren(parentElement, parentComponent) {
     
     if (previouslyRendered) {
         previouslyRendered.forEach((child) => {
-            if (child && child.remove) {
-                child.remove()
+            if (child && child._rmF) {
+                child._rmF()
             }
         })
     }
@@ -308,34 +184,35 @@ function update(obj) {
     }, this.props)
     if (didUpdate) {
         // Using a settimeout to allow this to be asynchrous
-        setTimeout(() => { 
+        delay(() => { 
             runContentFunc(this)
-            this.renderedChildren = this.renderChildren(this.element || this.parentElement, this)
+            this._rc = this._rcF(this.element || this._pe, this)
         })
     }
 }
 
 function remove() {
+    // 
+    this._lF('onWillRemove')
     // for cleanup of handles to eliminate memory leak -- can make the rest of the child cleanup async somehow
-    this.renderedChildren.forEach(c => c.remove())
+    this._rc.forEach(c => c._rmF())
     handles[this.handle] = null
-    let ep = this.parentElement;
-    if (this._events) {
-        this._events.forEach((rm) => rm())
+    let ep = this._pe;
+    if (this._e) {
+        this._e.forEach((rm) => rm())
     }
     if (this.element && ep && ep !== this.element) {
-        ep.removeChild(this.element)
+        ep._rmFChild(this.element)
     }
     this.element = null
-    this.parentComponent = null
-    this.parentElement = null
-    commitLifecycleEvent(this, LIFECYCLE_EVENTS_DESTROY)
+    this._pc = null
+    this._pe = null
 }
 
-function commitLifecycleEvent(context, eventName) {
-    let event =  context[eventName] || context.props[eventName]
+function commitLifecycleEvent(eventName) {
+    let event =  this[eventName] || this.props[eventName]
     if (event) {
-        event.call(context)
+        event.call(this)
     }
 }
 
@@ -365,12 +242,12 @@ export function register(tagNameOrComponent, overrides) {
         // TODO: Since attributes is an array, we could reduce our way to success.
         let attr = attributes[0] || {}
         let children = attributes.slice(1)
-        if (Array.isArray(attributes[0])) {
+        if (isArray (attributes[0])) {
             children = attributes[0]
             attr = {}
         } else if (isString(attributes[0])) {
             attr = {textContent: attributes[0]}
-        } else if (attributes[0].render) {
+        } else if (attributes[0]._rF) {
             children.unshift(attributes[0])
             attr = {}
         }
@@ -378,10 +255,11 @@ export function register(tagNameOrComponent, overrides) {
             attr.textContent = children[0]
             children = children.slice(1)
         }
-        if (Array.isArray(children[0])) {
+        if (isArray(children[0])) {
             children = children[0]
         }
         const props =  assign({}, attr, {children: children})
+        debugger
         if (isString(tagNameOrComponent)) {
             return createElementComponent(props, tagNameOrComponent, overrides)
         }
@@ -414,14 +292,4 @@ export function override(overrides) {
         return register(tagName, assign({}, overrides, secondaryOverride))
     }
 }
-
-/** Util Functions */
-function assign() {
-    return Object.assign.apply(null, Array.from(arguments))
-}
-
-function error(message) {
-    throw new Error(message)
-}
-
 window.handles = handles

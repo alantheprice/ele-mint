@@ -8,7 +8,7 @@ export const register = mockRegister
 export const createMockElement = mockElement 
 
 function attach(parentElement) {
-    this.parentElement = parentElement
+    this._pe = parentElement
     let element = this.elem
     if (!element) {
         element = mockElement(this.tagName)
