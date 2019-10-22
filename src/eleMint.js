@@ -138,10 +138,8 @@ function updateFunc(obj) {
     if (isFunction(this[updateReducer])) {
         reducedObj = this[updateReducer](this[data], obj)
     }
-    
     let didUpdate = false
     let didUpdateParent = false
-    // TODO: We need to intelligently manage how we pass data up, and how we handle it when it is passed up.
     let parentObj = {}
     this[data] = keys(reducedObj).reduce((agg, key) => {
         if (agg[key] !== reducedObj[key]) {
@@ -157,7 +155,6 @@ function updateFunc(obj) {
     }, this[data])
     if (didUpdateParent && this[parentComponent]) {
         this[parentComponent].update(parentObj)
-        return
     }
     if (didUpdate  && !didUpdateParent) {
         // Using a settimeout to allow this to be asynchrous
@@ -169,7 +166,6 @@ function updateFunc(obj) {
 }
 
 function remove() {
-    // 
     this[commitLifecycleEventFunc]('onWillRemove')
     // for cleanup of handles to eliminate memory leak -- can make the rest of the child cleanup async somehow
     this[renderedChildren].forEach(c => c[removeFunc]())
@@ -267,16 +263,4 @@ export const registerComponent = (component, internalData, overrides) => {
     return internalRegister({component: component, internalData: internalData, overrides: overrides})
 }
 
-// /**
-//  * override function to allow overriding parts of the rendering pipeline, or even the whole rendering
-//  * 
-//  * @export
-//  * @param {any} overrides 
-//  * @returns 
-//  */
-// export function override(overrides) {
-//     return function(tagName, secondaryOverride) {
-//         return register(tagName, assign({}, overrides, secondaryOverride))
-//     }
-// }
 window.handles = handles
