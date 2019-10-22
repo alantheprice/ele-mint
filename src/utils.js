@@ -1,6 +1,6 @@
 
 export const hasPrefix = (name, prefix) => name.slice(0, prefix.length) === prefix
-export const keys = obj => Object.keys(obj)
+export const keys = obj => Object.keys(obj || {})
 export const isType = type => val => typeof val === type
 export const isString = isType('string')
 export const isBool = isType('boolean')

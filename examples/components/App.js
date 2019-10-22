@@ -86,7 +86,6 @@ const styles = () => style(`
 
 class App extends Component {
   constructor(props) {
-    props.titleText = ""
     super(props, {
       titleText: "",
       notesToggleButtonText: "SHOW NOTES"
@@ -103,6 +102,13 @@ class App extends Component {
     this.update({
       titleText: notifyText
     })
+  }
+
+  updateReducer(previousData, newData) {
+    return {
+      ...previousData,
+      ...newData
+    }
   }
 
   /**

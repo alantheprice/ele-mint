@@ -1,5 +1,5 @@
 import { hasPrefix, keys } from "./utils"
-import { setAttributeFunc, addEventListenerFunc, renderChildrenFunc, attachFunc, commitLifecycleEventFunc, subscribedEvents } from "./nameMapping"
+import { setAttributeFunc, addEventListenerFunc, renderChildrenFunc, attachFunc, commitLifecycleEventFunc, subscribedEvents, renderedChildren, parentComponent, isVirtual, data, element } from "./nameMapping"
 
 /**
  * Renders the element and children to the DOM
@@ -8,14 +8,14 @@ import { setAttributeFunc, addEventListenerFunc, renderChildrenFunc, attachFunc,
  * @param {HTMLElement} parentElement
  * @returns {any}
  */
-export function render(parentElement, parentComponent) {
+export default function render(parentElement, parentComp) {
     let elem = this[attachFunc](parentElement)
-    this._pc = parentComponent
-    this.element = this._v ? null : elem
-    this._lF('onAttach')
-    this._rc = this[renderChildrenFunc](elem, this._v ? this : parentComponent)
+    this[parentComponent] = parentComp
+    this[element] = this[isVirtual] ? null : elem
+    this[commitLifecycleEventFunc]('onAttach')
+    this[renderedChildren] = this[renderChildrenFunc](elem, this[isVirtual] ? this : parentComp)
     const addProps = (attr, index, arr) => {
-        let value = this.props[attr]
+        let value = this[data][attr]
         // is native event property: 
         if (hasPrefix(attr, 'on')) {
             this[subscribedEvents] = this[subscribedEvents] || []
@@ -24,9 +24,9 @@ export function render(parentElement, parentComponent) {
         }
         this[setAttributeFunc](attr, value)
     }
-    if (!this._v) {
+    if (!this[isVirtual]) {
         // only add props for elements
-        keys(this.props).forEach(addProps)
+        keys(this[data]).forEach(addProps)
     }
     this[commitLifecycleEventFunc]('onRender')
     return this

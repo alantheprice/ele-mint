@@ -1,13 +1,11 @@
 import { compare } from './comparison';
 import { error, keys, assign, isFunction, isBool, isString, isArray, isClass, delay } from './utils';
-import { attach } from './attach';
-import { addEventListener } from './eventListener';
-import { render } from './render';
-import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, renderedChildren, parentComponent, parentElement, subscribedEvents } from './nameMapping';
+import attach from './attach';
+import addEventListener from './addEventListener';
+import render from './render';
+import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalDataProps, internalDataProps, isVirtual, renderedChildren, parentComponent, parentElement, subscribedEvents, data, tagName, handle, element, updateReducer } from './nameMapping';
+import setAttribute from './setAttributes';
 
-const MAPPED_ATTRIBUTES = { class: 'className' }
-const DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|style|checked|selected|src|srcdoc|srcset|tabindex|target'.split('|')
-        .reduce((agg, next)=> { agg[next] = 1; return agg }, {})
 const handles = {}
 
 const prototypeFuncs = {
@@ -19,9 +17,9 @@ const prototypeFuncs = {
         [removeFunc]: remove,
         [compareComponentFunc]: compareComponent,
         [commitLifecycleEventFunc]: commitLifecycleEvent,
-        // These two will likely be called by a user and should be sematic
-        'update': update,
-        'mount': mount,
+        // These two will able to be called by a user and should be sematic
+        'update': updateFunc,
+        'mount': mountFunc,
     }
 
 // Base
@@ -36,32 +34,32 @@ const prototypeFuncs = {
  *  
  *      content() {
  *          return section({class: 'c-section'}
- *              this.props.children
+ *              this.data.children
  *          )
  *      }
  *  }
  *  export Container
  *  ```
  *
- * @param {*} props
+ * @param {*} data
  */
-export const Component = function(props, initialProps) { 
+export const Component = function(passedInData, initialData) { 
     // TODO: We should do some magic here to find out if the prop is passed in, or if it is internal to the class....
     // Then we could figure out if we have to emit to the parent, or just handle internally.
-    this[externalData] = props
-    this[internalData] = initialProps
-    this.props = assign({}, props, initialProps)
+    this[externalDataProps] = keys(passedInData)
+    this[internalDataProps] = keys(initialData)
+    this[data] = assign({}, passedInData, initialData)
     this[isVirtual] = true
 }
-const createElementComponent = (props, tagName, overrides) => {
-    const comp = new Component(props)
-    comp.tagName = tagName
+const createElementComponent = (data, tagNameProp, overrides) => {
+    const comp = new Component(data)
+    comp[tagName] = tagNameProp
     comp[isVirtual] = false
     return assign(comp, overrides)
 }
 
-const createComponent = (props, initialProps, overrides) => {
-    const comp = new Component(props, initialProps)
+const createComponent = (data, initialData, overrides) => {
+    const comp = new Component(data, initialData)
     comp[isVirtual] = true
     return assign(comp, overrides)
 }
@@ -70,32 +68,14 @@ const createComponent = (props, initialProps, overrides) => {
 keys(prototypeFuncs).forEach((key) => Component.prototype[key] = prototypeFuncs[key])
 
 
-function mount(parentElement, parentComponent) {
+function mountFunc(parentElement, parentComponent) {
     let c = this[renderFunc](parentElement, parentComponent) 
-    this.handle = this.handle || this.props.id || this.props._id || Symbol(c.tagName || 'v')
-    if (c.element) {
-        c.element[removeFunc] = c[removeFunc]
+    this[handle] = this[handle] || this[data].id || Symbol(c[tagName] || 'v')
+    if (c[element]) {
+        c[element][removeFunc] = c[removeFunc]
     }
-    handles[this.handle] = c
+    handles[this[handle]] = c
     return c
-}
-
-
-/**
- * Set an attribute on the element
- * 
- * @param {string} attributeName 
- * @param {any} value 
- */
-function setAttribute(attributeName, value) {
-    if (attributeName === 'children') { return }
-    let mKey = MAPPED_ATTRIBUTES[attributeName] || attributeName,
-        elem = this.element
-    if (DIRECT_SET_ATTRIBUTES[mKey] || isBool(value)) {
-        elem[mKey] = value
-    } else {
-        elem.setAttribute(mKey, value)
-    }
 }
 
 /**
@@ -108,7 +88,7 @@ function compareComponent(comp) {
     const comparison = compare(this, comp)
     return {
         identical: keys(this).reduce((match, key) => match && comparison(key), true),
-        reusable: comparison('tagName')
+        reusable: comparison(tagName)
     }
 }
 
@@ -117,24 +97,23 @@ function renderChildren(parentElement, parentComponent) {
     let getExisting = (index) =>  previouslyRendered ? previouslyRendered[index] : null
     // The additional thing we need to consider if allowing a child to keep their state values 
     // rather than just overriding them..., but maybe that doesn't make sense.
-    // 
 
-    let children = this.props.children
+    let children = this[data].children
         .filter(child => child != null)
         .map((child, index) => {
             let current = getExisting(index)
             if (current) {
-                let comparison = current._ccF(child)
+                let comparison = current[compareComponentFunc](child)
                 if (comparison.identical) {
                     previouslyRendered[index] = undefined
                     return current
                 } else if (comparison.reusable) {
-                    child.element = current.element
+                    child[element] = current[element]
                     // this is set so as we go through the hierarchy everything works
                     child[renderedChildren] = current[renderedChildren]
                     // reset values so se can call remove to cleanup
                     current[renderedChildren] = []
-                    current.element = undefined
+                    current[element] = undefined
                 }
             }
             if (!child[renderFunc]) {
@@ -153,20 +132,38 @@ function renderChildren(parentElement, parentComponent) {
     return children
 }
 
-function update(obj) {
+function updateFunc(obj) {
+    let reducedObj = obj
+    // This allows the user 
+    if (isFunction(this[updateReducer])) {
+        reducedObj = this[updateReducer](this[data], obj)
+    }
+    
     let didUpdate = false
-    this.props = keys(obj).reduce((agg, key) => {
-        if (agg[key] !== obj[key]) {
-            agg[key] = obj[key]
-            didUpdate = true
+    let didUpdateParent = false
+    // TODO: We need to intelligently manage how we pass data up, and how we handle it when it is passed up.
+    let parentObj = {}
+    this[data] = keys(reducedObj).reduce((agg, key) => {
+        if (agg[key] !== reducedObj[key]) {
+            if (this[externalDataProps].indexOf(key) > -1) {
+                didUpdateParent = true
+                parentObj[key] = reducedObj[key]
+            } else {
+                agg[key] = reducedObj[key]
+                didUpdate = true
+            }
         }
         return agg
-    }, this.props)
-    if (didUpdate) {
+    }, this[data])
+    if (didUpdateParent && this[parentComponent]) {
+        this[parentComponent].update(parentObj)
+        return
+    }
+    if (didUpdate  && !didUpdateParent) {
         // Using a settimeout to allow this to be asynchrous
         delay(() => { 
             runContentFunc(this)
-            this[renderedChildren] = this[renderChildrenFunc](this.element || this._pe, this)
+            this[renderedChildren] = this[renderChildrenFunc](this.element || this[parentElement], this)
         })
     }
 }
@@ -176,21 +173,21 @@ function remove() {
     this[commitLifecycleEventFunc]('onWillRemove')
     // for cleanup of handles to eliminate memory leak -- can make the rest of the child cleanup async somehow
     this[renderedChildren].forEach(c => c[removeFunc]())
-    handles[this.handle] = null
+    handles[this[handle]] = null
     let ep = this[parentElement];
     if (this[subscribedEvents]) {
         this[subscribedEvents].forEach((rm) => rm())
     }
-    if (this.element && ep && ep !== this.element) {
-        ep.removeChild(this.element)
+    if (this[element] && ep && ep !== this[element]) {
+        ep.removeChild(this[element])
     }
-    this.element = null
+    this[element] = null
     this[parentComponent] = null
     this[parentElement] = null
 }
 
 function commitLifecycleEvent(eventName) {
-    let event =  this[eventName] || this.props[eventName]
+    let event =  this[eventName] || this.data[eventName]
     if (event) {
         event.call(this)
     }
@@ -198,9 +195,9 @@ function commitLifecycleEvent(eventName) {
 
 function runContentFunc(comp) {
     if (isFunction(comp.content)) {
-        comp.props.children = [
+        comp.data.children = [
             comp.content(
-                comp.props, 
+                comp[data], 
                 (obj) => comp.update(obj)
             )]
     }
@@ -238,14 +235,14 @@ export function register(tagNameOrComponent, overrides) {
         if (isArray(children[0])) {
             children = children[0]
         }
-        const props =  assign({}, attr, {children: children})
+        const data =  assign({}, attr, {children: children})
         if (isString(tagNameOrComponent)) {
-            return createElementComponent(props, tagNameOrComponent, overrides)
+            return createElementComponent(data, tagNameOrComponent, overrides)
         }
         if (isClass(tagNameOrComponent)) {
-            return new tagNameOrComponent(props)
+            return new tagNameOrComponent(data)
         }
-        return createComponent(props, {}, assign({}, overrides, {content: tagNameOrComponent}))
+        return createComponent(data, {}, assign({}, overrides, {content: tagNameOrComponent}))
     }
 
     /**
