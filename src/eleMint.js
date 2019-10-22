@@ -195,7 +195,7 @@ function commitLifecycleEvent(eventName) {
 
 function runContentFunc(comp) {
     if (isFunction(comp.content)) {
-        comp.data.children = [
+        comp[data].children = [
             comp.content(
                 comp[data], 
                 (obj) => comp.update(obj)
@@ -205,13 +205,16 @@ function runContentFunc(comp) {
 }
 
 /**
- * Returns a function closure for building different html elements.
- * 
- * @param {string|Function} tagNameOrComponent 
+ * Returns a function closure for building different html elements or components
+ * @param {Object} config
+ * @param {string} [config.tagName]
+ * @param {Function} [config.component]
+ * @param {Object} [config.overrides]
+ * @param {Object} [config.internalData]
  * @returns 
  */
-export function register(tagNameOrComponent, overrides) {
-    if (!tagNameOrComponent) {
+const internalRegister = (config) => {
+    if (!config[tagName] && !config.component) {
         error('tagName or Component must be defined')
     }
 
@@ -236,13 +239,13 @@ export function register(tagNameOrComponent, overrides) {
             children = children[0]
         }
         const data =  assign({}, attr, {children: children})
-        if (isString(tagNameOrComponent)) {
-            return createElementComponent(data, tagNameOrComponent, overrides)
+        if (isString(config[tagName])) {
+            return createElementComponent(data, config[tagName], config.overrides)
         }
-        if (isClass(tagNameOrComponent)) {
-            return new tagNameOrComponent(data)
+        if (isClass(config.component)) {
+            return new config.component(data, config.internalData)
         }
-        return createComponent(data, {}, assign({}, overrides, {content: tagNameOrComponent}))
+        return createComponent(data, config.internalData, assign({}, config.overrides, {content: config.component}))
     }
 
     /**
@@ -256,16 +259,24 @@ export function register(tagNameOrComponent, overrides) {
     }
 }
 
-/**
- * override function to allow overriding parts of the rendering pipeline, or even the whole rendering
- * 
- * @export
- * @param {any} overrides 
- * @returns 
- */
-export function override(overrides) {
-    return function(tagName, secondaryOverride) {
-        return register(tagName, assign({}, overrides, secondaryOverride))
-    }
+export const register = (tag, overrides) => {
+    return internalRegister({[tagName]: tag, overrides: overrides})
 }
+
+export const registerComponent = (component, internalData, overrides) => {
+    return internalRegister({component: component, internalData: internalData, overrides: overrides})
+}
+
+// /**
+//  * override function to allow overriding parts of the rendering pipeline, or even the whole rendering
+//  * 
+//  * @export
+//  * @param {any} overrides 
+//  * @returns 
+//  */
+// export function override(overrides) {
+//     return function(tagName, secondaryOverride) {
+//         return register(tagName, assign({}, overrides, secondaryOverride))
+//     }
+// }
 window.handles = handles

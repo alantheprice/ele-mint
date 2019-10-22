@@ -1,4 +1,4 @@
-import { register, Component } from '../../src/eleMint'
+import { register, registerComponent, Component } from '../../src/eleMint'
 import Card from './Card';
 const div = register('div'),
   button = register('button'),
@@ -11,19 +11,25 @@ const div = register('div'),
   textarea = register('textarea'),
   style = register("style")
 
-const Note = register((props) => {
-  if (!props.showNotes) {
+const noteFunc = (data, update) => {
+  if (!data.showNotes) {
     return null
   }
   return Card(
-    div(
-      h5(props.note.date)
+    div({
+      onclick: () => update({test: "worked", titleText: 'Bam!'})
+    },
+      h5(data.note.date),
+      p(data.test)
     ),
     p({class: "padding--vertical"},
-      props.note.message
+      data.note.message
     ),
   )
-})
+}
+
+// TODO: add state as second param
+const Note = registerComponent(noteFunc, {test:"1234"})
 
 const styles = () => style(`
   :root {
@@ -85,8 +91,8 @@ const styles = () => style(`
 `)
 
 class App extends Component {
-  constructor(props) {
-    super(props, {
+  constructor(data) {
+    super(data, {
       titleText: "",
       notesToggleButtonText: "SHOW NOTES"
     })
@@ -105,6 +111,7 @@ class App extends Component {
   }
 
   updateReducer(previousData, newData) {
+    debugger
     return {
       ...previousData,
       ...newData
@@ -118,13 +125,13 @@ class App extends Component {
    * or just update.
    */
 
-  content(props, update) {
-    console.log('titleText:', props.titleText)
+  content(data, update) {
+    console.log('titleText:', data.titleText)
 
     return (
       div({class: "page"},
         h1("Testing!"),
-        div({class: "test"}, props.titleText),
+        div({class: "test"}, data.titleText),
         Card(
             p("a bunch of rando contents that could easily be written out with better clarity.")
         ),
@@ -136,18 +143,18 @@ class App extends Component {
                 titleText: elem.value
               })
             },
-            value: props.titleText
+            value: data.titleText
           }),
           button(
             {
               onclick: () => update({
-                titleText: ""
+                notes: []
               })
             },
             "CLEAR"
           ),
           h3(
-            props.titleText
+            data.titleText
           ),
         ),
         Card(
@@ -166,14 +173,14 @@ class App extends Component {
         button(
           {
             onclick: () => update({
-              showNotes: !props.showNotes,
-              notesToggleButtonText: props.showNotes ? "SHOW NOTES" : "HIDE NOTES"
+              showNotes: !data.showNotes,
+              notesToggleButtonText: data.showNotes ? "SHOW NOTES" : "HIDE NOTES"
             })
           },
-          props.notesToggleButtonText
+          data.notesToggleButtonText
         ),
         div(
-          props.notes.map((note) => Note({note: note, showNotes: props.showNotes}))
+          data.notes.map((note) => Note({note: note, showNotes: data.showNotes, titleText: data.titleText}))
         ),
         styles()
       )
@@ -181,4 +188,4 @@ class App extends Component {
   }
 }
 
-export default register(App)
+export default registerComponent(App)

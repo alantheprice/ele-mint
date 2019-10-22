@@ -7,7 +7,7 @@ const notes = [
   },
   {
     date: new Date().toISOString(),
-    message: "I really enjoyed this going here. The food was good, and relatively quick, the server was attentive, but not stiffling. This might become my standby."
+    message: "I really enjoyed going here. The food was good, and relatively quick, the server was attentive, but not stiffling. This might become my standby."
   }
 ]
 
