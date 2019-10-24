@@ -6,9 +6,7 @@ export default function remove() {
     this[renderedChildren].forEach(c => c[removeFunc]())
     handles[this[handle]] = null
     let ep = this[parentElement];
-    debugger
     if (this[subscribedEvents]) {
-        debugger
         this[subscribedEvents].forEach(rm => rm())
     }
     if (this[element] && ep && ep !== this[element]) {

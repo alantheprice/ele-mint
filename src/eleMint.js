@@ -1,12 +1,13 @@
-import { compare } from './comparison';
+import compare from './compare';
 import { error, keys, assign, isString, isArray, isClass, runContentFunc } from './utils';
 import attach from './attach';
-import updateFunc from './update';
+import update from './update';
 import addEventListener from './addEventListener';
 import render from './render';
-import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, renderedChildren, parentComponent, parentElement, subscribedEvents, data, tagName, handle, element, updateReducer } from './nameMapping';
+import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children } from './nameMapping';
 import setAttribute from './setAttributes';
 import remove from './remove';
+import renderChildren from './renderChildren';
 
 const handles = {}
 
@@ -17,10 +18,10 @@ const prototypeFuncs = {
         [renderChildrenFunc]: renderChildren,
         [renderFunc]: render,
         [removeFunc]: remove,
-        [compareComponentFunc]: compareComponent,
+        [compareComponentFunc]: compare,
         [commitLifecycleEventFunc]: commitLifecycleEvent,
         // These two will able to be called by a user and should be sematic
-        'update': updateFunc,
+        'update': update,
         'mount': mountFunc,
     }
 
@@ -78,63 +79,8 @@ function mountFunc(parentElement, parentComponent) {
     return c
 }
 
-/**
- * 
- *
- * @param {Component} comp
- * @returns {{identical: boolean, reusable: boolean}}
- */
-function compareComponent(comp) {
-    const comparison = compare(this, comp)
-    return {
-        identical: keys(this).reduce((match, key) => match && comparison(key), true),
-        reusable: comparison(tagName)
-    }
-}
-
-function renderChildren(parentElement, parentComponent) {
-    let previouslyRendered = this[renderedChildren]
-    let getExisting = (index) =>  previouslyRendered ? previouslyRendered[index] : null
-    // The additional thing we need to consider if allowing a child to keep their state values 
-    // rather than just overriding them..., but maybe that doesn't make sense.
-
-    let children = this[data].children
-        .filter(child => child != null)
-        .map((child, index) => {
-            let current = getExisting(index)
-            if (current) {
-                let comparison = current[compareComponentFunc](child)
-                if (comparison.identical) {
-                    previouslyRendered[index] = undefined
-                    return current
-                } else if (comparison.reusable) {
-                    child[element] = current[element]
-                    // this is set so as we go through the hierarchy everything works
-                    child[renderedChildren] = current[renderedChildren]
-                    // reset values so se can call remove to cleanup
-                    current[renderedChildren] = []
-                    current[element] = undefined
-                }
-            }
-            if (!child[renderFunc]) {
-                error('child must have render function') 
-            }
-            return child.mount(parentElement, parentComponent)
-        })
-    debugger
-    if (previouslyRendered) {
-        previouslyRendered.forEach((child) => {
-            debugger
-            if (child && child[removeFunc]) {
-                child[removeFunc]()
-            }
-        })
-    }
-    return children
-}
-
 function commitLifecycleEvent(eventName) {
-    let event =  this[eventName] || this.data[eventName]
+    let event =  this[eventName] || this[data][eventName]
     if (event) {
         event.call(this)
     }
@@ -145,44 +91,45 @@ function commitLifecycleEvent(eventName) {
  * Returns a function closure for building different html elements or components
  * @param {Object} config
  * @param {string} [config.tagName]
- * @param {Function} [config.component]
- * @param {Object} [config.overrides]
- * @param {Object} [config.internalData]
+ * @param {Function} [config.component]  -- actually config[component] so it is using the correct property name
+ * @param {Object} [config.overrides]    -- actually config[overrides] so it is using the correct property name
+ * @param {Object} [config.internalData] -- actually config[internalData] so it is using the correct property name
  * @returns 
  */
 const internalRegister = (config) => {
-    if (!config[tagName] && !config.component) {
+    if (!config[tagName] && !config[component]) {
         error('tagName or Component must be defined')
     }
+    const rType = Symbol('rt')
 
     const construct = (...attributes) => {
         // TODO: Since attributes is an array, we could reduce our way to success.
         let attr = attributes[0] || {}
-        let children = attributes.slice(1)
+        let childs = attributes.slice(1)
         if (isArray (attributes[0])) {
-            children = attributes[0]
+            childs = attributes[0]
             attr = {}
         } else if (isString(attributes[0])) {
             attr = {textContent: attributes[0]}
         } else if (attributes[0][renderFunc]) {
-            children.unshift(attributes[0])
+            childs.unshift(attributes[0])
             attr = {}
         }
-        if (isString(children[0])) {
-            attr.textContent = children[0]
-            children = children.slice(1)
+        if (isString(childs[0])) {
+            attr.textContent = childs[0]
+            childs = childs.slice(1)
         }
-        if (isArray(children[0])) {
-            children = children[0]
+        if (isArray(childs[0])) {
+            childs = childs[0]
         }
-        const data =  assign({}, attr, {children: children})
+        const data =  assign({}, attr, {[children]: childs})
         if (isString(config[tagName])) {
-            return createElementComponent(data, config[tagName], config.overrides)
+            return createElementComponent(data, config[tagName], overrides)
         }
-        if (isClass(config.component)) {
-            return new config.component(data, config.internalData)
+        if (isClass(config[component])) {
+            return new config[component](data, config[internalData])
         }
-        return createComponent(data, config.internalData, assign({}, config.overrides, {content: config.component}))
+        return createComponent(data, config[internalData], assign({}, overrides, {content: config[component]}))
     }
 
     /**
@@ -192,17 +139,25 @@ const internalRegister = (config) => {
      * @returns {FunDom}
      */
     return function build(...attributes) {
-        return runContentFunc(construct(...attributes))
+        let comp = runContentFunc(construct(...attributes))
+        comp[registeredType] = rType
+        return comp
     }
 }
 
-export const register = (tag, overrides) => {
-
-    return internalRegister({[tagName]: tag, overrides: overrides})
+export const register = (tag, overrideFunctions) => {
+    return internalRegister({
+        [tagName]: tag, 
+        [overrides]: overrideFunctions
+    })
 }
 
-export const registerComponent = (component, internalData, overrides) => {
-    return internalRegister({component: component, internalData: internalData, overrides: overrides})
+export const registerComponent = (comp, intData, overrideFunctions) => {
+    return internalRegister({
+        [component]: comp, 
+        [internalData]: intData, 
+        [overrides]: overrideFunctions
+    })
 }
 
 window.handles = handles
