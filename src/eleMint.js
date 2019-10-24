@@ -1,10 +1,12 @@
 import { compare } from './comparison';
-import { error, keys, assign, isFunction, isBool, isString, isArray, isClass, delay } from './utils';
+import { error, keys, assign, isString, isArray, isClass, runContentFunc } from './utils';
 import attach from './attach';
+import updateFunc from './update';
 import addEventListener from './addEventListener';
 import render from './render';
-import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalDataProps, internalDataProps, isVirtual, renderedChildren, parentComponent, parentElement, subscribedEvents, data, tagName, handle, element, updateReducer } from './nameMapping';
+import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, renderedChildren, parentComponent, parentElement, subscribedEvents, data, tagName, handle, element, updateReducer } from './nameMapping';
 import setAttribute from './setAttributes';
+import remove from './remove';
 
 const handles = {}
 
@@ -22,7 +24,6 @@ const prototypeFuncs = {
         'mount': mountFunc,
     }
 
-// Base
 /**
  * Base Class/Prototype to extend for class usage
  *  example: 
@@ -30,7 +31,7 @@ const prototypeFuncs = {
  *  import { Component, register } from 'ele-mint'
  *  const section = register('section')
  * 
- *  class Container extents Component {
+ *  class Container extends Component {
  *  
  *      content() {
  *          return section({class: 'c-section'}
@@ -43,14 +44,13 @@ const prototypeFuncs = {
  *
  * @param {*} data
  */
-export const Component = function(passedInData, initialData) { 
-    // TODO: We should do some magic here to find out if the prop is passed in, or if it is internal to the class....
-    // Then we could figure out if we have to emit to the parent, or just handle internally.
-    this[externalDataProps] = keys(passedInData)
-    this[internalDataProps] = keys(initialData)
+export const Component = function(passedInData, initialData) {
+    this[externalData] = assign({}, passedInData)
+    this[internalData] = assign({}, initialData)
     this[data] = assign({}, passedInData, initialData)
     this[isVirtual] = true
 }
+
 const createElementComponent = (data, tagNameProp, overrides) => {
     const comp = new Component(data)
     comp[tagName] = tagNameProp
@@ -121,65 +121,16 @@ function renderChildren(parentElement, parentComponent) {
             }
             return child.mount(parentElement, parentComponent)
         })
-    
+    debugger
     if (previouslyRendered) {
         previouslyRendered.forEach((child) => {
+            debugger
             if (child && child[removeFunc]) {
                 child[removeFunc]()
             }
         })
     }
     return children
-}
-
-function updateFunc(obj) {
-    let reducedObj = obj
-    // This allows the user 
-    if (isFunction(this[updateReducer])) {
-        reducedObj = this[updateReducer](this[data], obj)
-    }
-    let didUpdate = false
-    let didUpdateParent = false
-    let parentObj = {}
-    this[data] = keys(reducedObj).reduce((agg, key) => {
-        if (agg[key] !== reducedObj[key]) {
-            if (this[externalDataProps].indexOf(key) > -1) {
-                didUpdateParent = true
-                parentObj[key] = reducedObj[key]
-            } else {
-                agg[key] = reducedObj[key]
-                didUpdate = true
-            }
-        }
-        return agg
-    }, this[data])
-    if (didUpdateParent && this[parentComponent]) {
-        this[parentComponent].update(parentObj)
-    }
-    if (didUpdate  && !didUpdateParent) {
-        // Using a settimeout to allow this to be asynchrous
-        delay(() => { 
-            runContentFunc(this)
-            this[renderedChildren] = this[renderChildrenFunc](this.element || this[parentElement], this)
-        })
-    }
-}
-
-function remove() {
-    this[commitLifecycleEventFunc]('onWillRemove')
-    // for cleanup of handles to eliminate memory leak -- can make the rest of the child cleanup async somehow
-    this[renderedChildren].forEach(c => c[removeFunc]())
-    handles[this[handle]] = null
-    let ep = this[parentElement];
-    if (this[subscribedEvents]) {
-        this[subscribedEvents].forEach((rm) => rm())
-    }
-    if (this[element] && ep && ep !== this[element]) {
-        ep.removeChild(this[element])
-    }
-    this[element] = null
-    this[parentComponent] = null
-    this[parentElement] = null
 }
 
 function commitLifecycleEvent(eventName) {
@@ -189,16 +140,6 @@ function commitLifecycleEvent(eventName) {
     }
 }
 
-function runContentFunc(comp) {
-    if (isFunction(comp.content)) {
-        comp[data].children = [
-            comp.content(
-                comp[data], 
-                (obj) => comp.update(obj)
-            )]
-    }
-    return comp
-}
 
 /**
  * Returns a function closure for building different html elements or components
@@ -245,7 +186,7 @@ const internalRegister = (config) => {
     }
 
     /**
-     * Create an element definition for tagNameOrComponent and input attributes
+     * Create an element definition for tagName or Component and input attributes
      * @param {any} attributes 
      * @param {...FunDom} [children] 
      * @returns {FunDom}
@@ -256,6 +197,7 @@ const internalRegister = (config) => {
 }
 
 export const register = (tag, overrides) => {
+
     return internalRegister({[tagName]: tag, overrides: overrides})
 }
 

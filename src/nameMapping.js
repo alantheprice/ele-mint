@@ -15,8 +15,8 @@ export const subscribedEvents = "_se"
 export const renderedChildren = "_rc"
 
 // TODO: this can't be _id long term, that will be too confusing
-export const internalDataProps = "_i" // (roughly maps to state from react)
-export const externalDataProps = "_e" // (roughly maps to props from react)
+export const internalData = "_i" // (roughly maps to state from react)
+export const externalData = "_e" // (roughly maps to props from react)
 export const data = "data" // (roughly maps to props + state from react)
 export const tagName = "tagName"
 export const element = "element"

@@ -1,5 +1,5 @@
 import { isNull, isFunction, isArray, isObject, keys } from "./utils"
-import { parentElement, parentComponent, subscribedEvents, internalDataProps, externalDataProps, renderedChildren, element, handle } from "./nameMapping"
+import { parentElement, parentComponent, subscribedEvents, internalData, externalData, renderedChildren, element, handle } from "./nameMapping"
 
 const ignoreCompare = [
     element,
@@ -8,8 +8,11 @@ const ignoreCompare = [
     parentComponent,
     renderedChildren,
     subscribedEvents,
-    externalDataProps,
-    internalDataProps
+    externalData,
+    internalData
+    // TODO: Move to testing against external props
+    // - The real trick here is to test against internal props when we are looking at a specific component for their own data,
+    // - but not if we are looking at children.
 ]
 
 // const compareObjDetails = (val, val2, name, obj, obj2) => {
