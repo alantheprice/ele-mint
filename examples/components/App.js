@@ -29,7 +29,11 @@ const noteFunc = (data, update) => {
 }
 
 // TODO: add state as second param
-const Note = registerComponent(noteFunc, {test:"1234"})
+const Note = registerComponent(noteFunc, {test:"1234"}, {
+  onDataUpdated: (oldData, newData) => {
+  console.log("dataUpdated, Old:", oldData)
+  console.log("dataUpdated, New:", newData)
+}})
 
 const styles = () => style(`
   :root {
@@ -111,11 +115,14 @@ class App extends Component {
   }
 
   updateReducer(previousData, newData) {
-    debugger
     return {
       ...previousData,
       ...newData
     }
+  }
+
+  onDataUpdated(previousData, newData) {
+    console.log('onDataUpdated')
   }
 
   /**
@@ -126,7 +133,7 @@ class App extends Component {
    */
 
   content(data, update) {
-    console.log('titleText:', data.titleText)
+    // console.log('titleText:', data.titleText)
 
     return (
       div({class: "page"},

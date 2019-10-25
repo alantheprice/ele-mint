@@ -6,6 +6,7 @@ export const renderFunc = "_rF"
 export const removeFunc = "_rmF"
 export const compareComponentFunc = "_ccF"
 export const commitLifecycleEventFunc = "_lF"
+export const dataDidChangeFunc = "_dcF"
 export const updateReducer = "updateReducer"
 
 export const isVirtual = "_v"

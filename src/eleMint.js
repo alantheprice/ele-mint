@@ -4,7 +4,7 @@ import attach from './attach';
 import update from './update';
 import addEventListener from './addEventListener';
 import render from './render';
-import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children } from './nameMapping';
+import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children, dataDidChangeFunc } from './nameMapping';
 import setAttribute from './setAttributes';
 import remove from './remove';
 import renderChildren from './renderChildren';
@@ -20,6 +20,7 @@ const prototypeFuncs = {
         [removeFunc]: remove,
         [compareComponentFunc]: compare,
         [commitLifecycleEventFunc]: commitLifecycleEvent,
+        [dataDidChangeFunc]: dataDidChange,
         // These two will able to be called by a user and should be sematic
         'update': update,
         'mount': mountFunc,
@@ -80,10 +81,17 @@ function mountFunc(parentElement, parentComponent) {
 }
 
 function commitLifecycleEvent(eventName) {
-    let event =  this[eventName] || this[data][eventName]
+    let event =  this[eventName]
     if (event) {
-        event.call(this)
+        let args = [...arguments]
+        event.call(this, args.slice(0))
     }
+}
+
+function dataDidChange(newData) {
+    this[externalData] = newData
+    this[data] = assign({}, this[internalData], this[externalData])
+    runContentFunc(this)
 }
 
 
@@ -124,12 +132,12 @@ const internalRegister = (config) => {
         }
         const data =  assign({}, attr, {[children]: childs})
         if (isString(config[tagName])) {
-            return createElementComponent(data, config[tagName], overrides)
+            return createElementComponent(data, config[tagName], config[overrides])
         }
         if (isClass(config[component])) {
             return new config[component](data, config[internalData])
         }
-        return createComponent(data, config[internalData], assign({}, overrides, {content: config[component]}))
+        return createComponent(data, config[internalData], assign({}, config[overrides], {content: config[component]}))
     }
 
     /**
