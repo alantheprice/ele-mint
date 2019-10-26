@@ -33,7 +33,11 @@ const Note = registerComponent(noteFunc, {test:"1234"}, {
   onDataUpdated: (oldData, newData) => {
   console.log("dataUpdated, Old:", oldData)
   console.log("dataUpdated, New:", newData)
-}})
+},
+  onAttach: () => {
+    console.log("We attached!")
+  }
+})
 
 const styles = () => style(`
   :root {

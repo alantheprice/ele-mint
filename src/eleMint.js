@@ -4,7 +4,7 @@ import attach from './attach';
 import update from './update';
 import addEventListener from './addEventListener';
 import render from './render';
-import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children, dataDidChangeFunc } from './nameMapping';
+import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children, dataDidChangeFunc, setDataFunc, updateFunc, mountFunc } from './nameMapping';
 import setAttribute from './setAttributes';
 import remove from './remove';
 import renderChildren from './renderChildren';
@@ -21,9 +21,9 @@ const prototypeFuncs = {
         [compareComponentFunc]: compare,
         [commitLifecycleEventFunc]: commitLifecycleEvent,
         [dataDidChangeFunc]: dataDidChange,
-        // These two will able to be called by a user and should be sematic
-        'update': update,
-        'mount': mountFunc,
+        [setDataFunc]: setData,
+        [updateFunc]: update,
+        [mountFunc]: mount,
     }
 
 /**
@@ -47,9 +47,7 @@ const prototypeFuncs = {
  * @param {*} data
  */
 export const Component = function(passedInData, initialData) {
-    this[externalData] = assign({}, passedInData)
-    this[internalData] = assign({}, initialData)
-    this[data] = assign({}, passedInData, initialData)
+    this[setDataFunc](initialData, passedInData)
     this[isVirtual] = true
 }
 
@@ -62,7 +60,6 @@ const createElementComponent = (data, tagNameProp, overrides) => {
 
 const createComponent = (data, initialData, overrides) => {
     const comp = new Component(data, initialData)
-    comp[isVirtual] = true
     return assign(comp, overrides)
 }
 
@@ -70,7 +67,7 @@ const createComponent = (data, initialData, overrides) => {
 keys(prototypeFuncs).forEach((key) => Component.prototype[key] = prototypeFuncs[key])
 
 
-function mountFunc(parentElement, parentComponent) {
+function mount(parentElement, parentComponent) {
     let c = this[renderFunc](parentElement, parentComponent) 
     this[handle] = this[handle] || this[data].id || Symbol(c[tagName] || 'v')
     if (c[element]) {
@@ -83,15 +80,19 @@ function mountFunc(parentElement, parentComponent) {
 function commitLifecycleEvent(eventName) {
     let event =  this[eventName]
     if (event) {
-        let args = [...arguments]
-        event.call(this, args.slice(0))
+        event.call(this, [...arguments].slice(0))
     }
 }
 
 function dataDidChange(newData) {
-    this[externalData] = newData
-    this[data] = assign({}, this[internalData], this[externalData])
+    this[setDataFunc](this[internalData], newData)
     runContentFunc(this)
+}
+
+function setData(intData, extData) {
+    this[externalData] = assign({}, extData)
+    this[internalData] = assign({}, intData)
+    this[data] = assign({}, this[internalData], this[externalData])
 }
 
 

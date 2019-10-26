@@ -96,7 +96,6 @@ const compare = (obj, obj2) => (name) => {
 export default function compareComponent(comp) {
     const comparison = compare(this, comp)
     
-    // TODO: fix this, it is not working correctly, we are removing elements we could update, and we are not reusing components that we should.
     return {
         identical: keys(this).reduce((match, key) => match && comparison(key), true),
         reusable: this[tagName] ? comparison(tagName) : compareObj(this[registeredType], comp[registeredType])

@@ -1,3 +1,4 @@
+import { contentFunc, data, children, updateFunc } from "./nameMapping"
 
 export const hasPrefix = (name, prefix) => name.slice(0, prefix.length) === prefix
 export const keys = obj => Object.keys(obj || {})
@@ -33,11 +34,11 @@ export function error(message) {
 }
 
 export function runContentFunc(comp) {
-    if (isFunction(comp.content)) {
-        comp.data.children = [
-            comp.content(
-                comp.data, 
-                (obj) => comp.update(obj)
+    if (isFunction(comp[contentFunc])) {
+        comp[data][children] = [
+            comp[contentFunc](
+                comp[data], 
+                (obj) => comp[updateFunc](obj)
             )]
     }
     return comp
