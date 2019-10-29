@@ -1,10 +1,10 @@
 import compare from './compare';
-import { error, keys, assign, isString, isArray, isClass, runContentFunc } from './utils';
+import { error, keys, assign, isString, isArray, isClass } from './utils';
 import attach from './attach';
 import update from './update';
 import addEventListener from './addEventListener';
 import render from './render';
-import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children, dataDidChangeFunc, setDataFunc, updateFunc, mountFunc } from './nameMapping';
+import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children, dataDidChangeFunc, setDataFunc, updateFunc, mountFunc, commitUpdateFunc, renderedChildren, parentElement } from './nameMapping';
 import setAttribute from './setAttributes';
 import remove from './remove';
 import renderChildren from './renderChildren';
@@ -22,6 +22,7 @@ const prototypeFuncs = {
         [commitLifecycleEventFunc]: commitLifecycleEvent,
         [dataDidChangeFunc]: dataDidChange,
         [setDataFunc]: setData,
+        [commitUpdateFunc]: commitUpdate,
         [updateFunc]: update,
         [mountFunc]: mount,
     }
@@ -35,7 +36,7 @@ const prototypeFuncs = {
  * 
  *  class Container extends Component {
  *  
- *      content() {
+ *      content(data, update) {
  *          return section({class: 'c-section'}
  *              this.data.children
  *          )
@@ -80,19 +81,24 @@ function mount(parentElement, parentComponent) {
 function commitLifecycleEvent(eventName) {
     let event =  this[eventName]
     if (event) {
-        event.call(this, [...arguments].slice(0))
+        return event.apply(this, [...arguments].slice(1)) || true
     }
+    return true
 }
 
 function dataDidChange(newData) {
     this[setDataFunc](this[internalData], newData)
-    runContentFunc(this)
+    this[commitUpdateFunc]()
 }
 
 function setData(intData, extData) {
     this[externalData] = assign({}, extData)
     this[internalData] = assign({}, intData)
     this[data] = assign({}, this[internalData], this[externalData])
+}
+
+function commitUpdate() {
+    this[renderedChildren] = this[renderChildrenFunc](this[element] || this[parentElement], this)
 }
 
 
@@ -120,7 +126,7 @@ const internalRegister = (config) => {
             attr = {}
         } else if (isString(attributes[0])) {
             attr = {textContent: attributes[0]}
-        } else if (attributes[0][renderFunc]) {
+        } else if ((attributes[0]||{})[renderFunc]) {
             childs.unshift(attributes[0])
             attr = {}
         }
@@ -148,7 +154,7 @@ const internalRegister = (config) => {
      * @returns {FunDom}
      */
     return function build(...attributes) {
-        let comp = runContentFunc(construct(...attributes))
+        let comp = construct(...attributes)
         comp[registeredType] = rType
         return comp
     }

@@ -32,14 +32,3 @@ export function assign() {
 export function error(message) {
     throw new Error(message)
 }
-
-export function runContentFunc(comp) {
-    if (isFunction(comp[contentFunc])) {
-        comp[data][children] = [
-            comp[contentFunc](
-                comp[data], 
-                (obj) => comp[updateFunc](obj)
-            )]
-    }
-    return comp
-}

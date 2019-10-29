@@ -1,5 +1,5 @@
-import { isFunction, delay, runContentFunc, keys, isUndefined } from "./utils"
-import { updateReducer, data, externalData, internalData, parentComponent, renderChildrenFunc, renderedChildren, parentElement } from "./nameMapping"
+import { isFunction, delay, keys, isUndefined } from "./utils"
+import { updateReducer, element, data, externalData, internalData, parentComponent, renderChildrenFunc, renderedChildren, parentElement, commitUpdateFunc } from "./nameMapping"
 
 export default function update(obj) {
     let reducedObj = obj
@@ -28,9 +28,8 @@ export default function update(obj) {
     }
     if (didUpdate  && !didUpdateParent) {
         // delay here to allow this to be asynchrous
-        delay(() => { 
-            runContentFunc(this)
-            this[renderedChildren] = this[renderChildrenFunc](this.element || this[parentElement], this)
+        delay(() => {
+            this[commitUpdateFunc]()
         })
     }
 }
