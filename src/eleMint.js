@@ -88,7 +88,8 @@ function commitLifecycleEvent(eventName) {
 
 function dataDidChange(newData) {
     this[setDataFunc](this[internalData], newData)
-    this[commitUpdateFunc]()
+    this[setAttributeFunc]()
+    this[commitUpdateFunc](this)
 }
 
 function setData(intData, extData) {
@@ -97,9 +98,10 @@ function setData(intData, extData) {
     this[data] = assign({}, this[internalData], this[externalData])
 }
 
-function commitUpdate() {
-    this[renderedChildren] = this[renderChildrenFunc](this[element] || this[parentElement], this)
+function commitUpdate(context) {
+    context[renderedChildren] = context[renderChildrenFunc](context[element] || context[parentElement], context)
 }
+
 
 
 /**

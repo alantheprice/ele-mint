@@ -23,20 +23,13 @@ export default function render(parentElement, parentComp) {
         elem, 
         this[isVirtual] ? this : parentComp
     )
-    const addProps = (attr, index, arr) => {
-        let value = this[data][attr]
-        // is native event property: 
-        if (hasPrefix(attr, "on")) {
-            this[subscribedEvents] = this[subscribedEvents] || []
-            this[subscribedEvents].push(this[addEventListenerFunc](attr.slice(2), value))
-            return
-        }
-        this[setAttributeFunc](attr, value)
-    }
-    if (!this[isVirtual]) {
-        // only add props for elements
-        keys(this[data]).forEach(addProps)
-    }
-    this[commitLifecycleEventFunc]('onRender')
+    this[setAttributeFunc]()
+    this[commitLifecycleEventFunc](
+        'onRender', 
+        this[element], 
+        this[data], 
+        obj => this[updateFunc](obj), 
+        this
+    )
     return this
 }

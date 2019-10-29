@@ -29,7 +29,7 @@ export default function update(obj) {
     if (didUpdate  && !didUpdateParent) {
         // delay here to allow this to be asynchrous
         delay(() => {
-            this[commitUpdateFunc]()
+            this[commitUpdateFunc](this)
         })
     }
 }

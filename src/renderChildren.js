@@ -18,20 +18,12 @@ export default function renderChildren(parentElement, parentComponent) {
                 if (identical) {
                     previouslyRendered[index] = undefined
                     return current
-                } else if (child[isVirtual] && reusable) {
+                } else if (reusable) {
                     previouslyRendered[index] = undefined
                     if (current[commitLifecycleEventFunc]("onDataUpdated", current[externalData], child[externalData])) {
                         current[dataDidChangeFunc](child[externalData])
                     }
                     return current
-                } else if (reusable) {
-                    child[element] = current[element]
-                    child[parentElement] = current[parentElement]
-                    // this is set so as we go through the hierarchy everything works
-                    child[renderedChildren] = current[renderedChildren]
-                    // reset values so we can call remove to cleanup
-                    current[renderedChildren] = []
-                    current[element] = undefined
                 } else {
                     console.log("not reusable")
                 }
