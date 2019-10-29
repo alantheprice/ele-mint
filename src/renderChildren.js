@@ -24,8 +24,6 @@ export default function renderChildren(parentElement, parentComponent) {
                         current[dataDidChangeFunc](child[externalData])
                     }
                     return current
-                } else {
-                    console.log("not reusable")
                 }
             }
             if (!child[renderFunc]) {
