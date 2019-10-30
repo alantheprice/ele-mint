@@ -1,4 +1,3 @@
-import { contentFunc, data, children, updateFunc } from "./nameMapping"
 
 export const hasPrefix = (name, prefix) => name.slice(0, prefix.length) === prefix
 export const keys = obj => Object.keys(obj || {})

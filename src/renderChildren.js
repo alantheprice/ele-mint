@@ -46,7 +46,7 @@ function runContentFunc(comp) {
         comp[data][children] = [
             comp[contentFunc](
                 comp[data], 
-                obj => comp[updateFunc](obj)
+                (obj) => comp[updateFunc](obj)
             )]
     }
     return comp
