@@ -78,10 +78,10 @@ function mount(parentElement, parentComponent) {
     return c
 }
 
-function commitLifecycleEvent(eventName) {
-    let event =  this[eventName]
+function commitLifecycleEvent(args) {
+    let event =  this[args[0]]
     if (event) {
-        return event.apply(this, [...arguments].slice(1)) || true
+        return event.apply(this, args.slice(1)) || true
     }
     return true
 }

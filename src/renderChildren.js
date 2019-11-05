@@ -20,7 +20,11 @@ export default function renderChildren(parentElement, parentComponent) {
                     return current
                 } else if (reusable) {
                     previouslyRendered[index] = undefined
-                    if (current[commitLifecycleEventFunc]("onDataUpdated", current[externalData], child[externalData])) {
+                    if (current[commitLifecycleEventFunc]([
+                        "onDataUpdated", 
+                        current[externalData], 
+                        child[externalData]
+                    ])) {
                         current[dataDidChangeFunc](child[externalData])
                     }
                     return current

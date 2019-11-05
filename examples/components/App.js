@@ -12,9 +12,6 @@ const div = register('div'),
   style = register("style")
 
 const noteFunc = (data, update) => {
-  if (!data.showNotes) {
-    return null
-  }
   return Card(
     div({
       onclick: () => update({test: "worked", titleText: 'Bam!'})
@@ -102,7 +99,7 @@ class App extends Component {
   constructor(data) {
     super(data, {
       titleText: "",
-      notesToggleButtonText: "SHOW NOTES"
+      showNotes: true
     })
   }
 
@@ -137,7 +134,6 @@ class App extends Component {
    */
 
   content(data, update) {
-    // console.log('titleText:', data.titleText)
 
     return (
       div({class: "page"},
@@ -183,15 +179,18 @@ class App extends Component {
         h3("Notes"),
         button(
           {
+            name: "Button",
             onclick: () => update({
-              showNotes: !data.showNotes,
-              notesToggleButtonText: data.showNotes ? "SHOW NOTES" : "HIDE NOTES"
+              showNotes: !data.showNotes
             })
           },
-          data.notesToggleButtonText
+          data.showNotes ? "HIDE NOTES" : "SHOW NOTES"
         ),
         div(
-          data.notes.map((note) => Note({note: note, showNotes: data.showNotes, titleText: data.titleText}))
+          data.showNotes ? data.notes.map((note) => Note({
+            note: note, 
+            titleText: data.titleText
+          })) : null
         ),
         styles()
       )

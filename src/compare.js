@@ -11,14 +11,15 @@ const ignoreCompare = [
     externalData,
     internalData,
     registeredType
-    // TODO: Move to testing against external props
-    // - The real trick here is to test against internal props when we are looking at a specific component for their own data,
-    // - but not if we are looking at children.
 ]
 
 // const compareObj = (val, val2, name, obj, obj2) => {
 //     if (isNull(val) && isNull(val2)){
 //         return true
+//     }
+//     if (isNull(val) || isNull(val2)) {
+//         console.log('one null')
+//         return false
 //     }
 //     if (typeof val !== typeof val2) {
 //         console.log(name, "typeof", false)
@@ -60,6 +61,9 @@ const compareObj = (val, val2) => {
     if (isNull(val) && isNull(val2)){
         return true
     }
+    if (isNull(val) || isNull(val2)) {
+        return false
+    }
     if (typeof val !== typeof val2) {
         return false
     }
@@ -68,6 +72,7 @@ const compareObj = (val, val2) => {
         return true
     } else if (isArray(val)) {
         return isArray(val2) && 
+            val.length === val2.length &&
             val.reduce(
                 (bool, next, index) => bool && compareObj(next, val2[index]), true)
     } else if (isObject(val)) {
@@ -94,10 +99,10 @@ const compare = (obj, obj2) => (name) => {
  * @returns {{identical: boolean, reusable: boolean}}
  */
 export default function compareComponent(comp) {
-    const comparison = compare(this, comp)
+    const comparison = compare(this.data, comp.data)
     
     return {
-        identical: keys(this).reduce((match, key) => match && comparison(key), true),
+        identical: keys(this.data).reduce((match, key) => match && comparison(key), true),
         reusable: this[tagName] ? comparison(tagName) : compareObj(this[registeredType], comp[registeredType])
     }
 }

@@ -1,5 +1,4 @@
-import { hasPrefix, keys } from "./utils"
-import { setAttributeFunc, addEventListenerFunc, renderChildrenFunc, attachFunc, commitLifecycleEventFunc, subscribedEvents, renderedChildren, parentComponent, isVirtual, data, element, updateFunc } from "./nameMapping"
+import { setAttributeFunc, renderChildrenFunc, attachFunc, commitLifecycleEventFunc, renderedChildren, parentComponent, isVirtual, data, element, updateFunc } from "./nameMapping"
 
 /**
  * Renders the element and children to the DOM
@@ -12,24 +11,17 @@ export default function render(parentElement, parentComp) {
     let elem = this[attachFunc](parentElement)
     this[parentComponent] = parentComp
     this[element] = this[isVirtual] ? null : elem
-    this[commitLifecycleEventFunc](
-        "onAttach", 
+    const arr = [
         this[element], 
         this[data], 
         obj => this[updateFunc](obj), 
-        this
-    )
+        this]
+    this[commitLifecycleEventFunc](["onAttach"].concat(arr))
     this[renderedChildren] = this[renderChildrenFunc](
         elem, 
         this[isVirtual] ? this : parentComp
     )
     this[setAttributeFunc]()
-    this[commitLifecycleEventFunc](
-        'onRender', 
-        this[element], 
-        this[data], 
-        obj => this[updateFunc](obj), 
-        this
-    )
+    this[commitLifecycleEventFunc](["onRender"].concat(arr))
     return this
 }

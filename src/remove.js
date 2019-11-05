@@ -1,7 +1,7 @@
 import { commitLifecycleEventFunc, renderedChildren, removeFunc, handle, parentElement, subscribedEvents, element, parentComponent } from "./nameMapping";
 
 export default function remove() {
-    this[commitLifecycleEventFunc]('onWillRemove')
+    this[commitLifecycleEventFunc](['onWillRemove'])
     // for cleanup of handles to eliminate memory leak -- can make the rest of the child cleanup async somehow
     this[renderedChildren].forEach(c => c[removeFunc]())
     handles[this[handle]] = null
