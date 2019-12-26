@@ -6,9 +6,10 @@ import addEventListener from './addEventListener';
 import render from './render';
 import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children, dataDidChangeFunc, setDataFunc, updateFunc, mountFunc, commitUpdateFunc, renderedChildren, parentElement } from './nameMapping';
 import setAttribute from './setAttributes';
-import remove from './remove';
+import setupRemove from './remove';
 import renderChildren from './renderChildren';
 const handles = {}
+const remove = setupRemove(handles)
 const config = {debug: false}
 const logCall = function (func, name) {
     return function (...args) {
