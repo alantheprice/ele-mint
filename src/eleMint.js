@@ -8,23 +8,32 @@ import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc,
 import setAttribute from './setAttributes';
 import remove from './remove';
 import renderChildren from './renderChildren';
-
 const handles = {}
+const config = {debug: false}
+const logCall = function (func, name) {
+    return function (...args) {
+        if (config.debug) {
+            console.log(`${name} called with context: `,this, "args",  args)
+        }
+        return func.apply(this, args)
+    }
+}
+
 
 const prototypeFuncs = {
-        [attachFunc]: attach,
-        [addEventListenerFunc]: addEventListener,
-        [setAttributeFunc]: setAttribute,
-        [renderChildrenFunc]: renderChildren,
-        [renderFunc]: render,
-        [removeFunc]: remove,
-        [compareComponentFunc]: compare,
-        [commitLifecycleEventFunc]: commitLifecycleEvent,
-        [dataDidChangeFunc]: dataDidChange,
-        [setDataFunc]: setData,
-        [commitUpdateFunc]: commitUpdate,
-        [updateFunc]: update,
-        [mountFunc]: mount,
+        [attachFunc]: logCall(attach, 'attach'),
+        [addEventListenerFunc]: logCall(addEventListener, 'addEventListener'),
+        [setAttributeFunc]: logCall(setAttribute, 'setAttribute'),
+        [renderChildrenFunc]: logCall(renderChildren, 'renderChildren'),
+        [renderFunc]: logCall(render, 'render'),
+        [removeFunc]: logCall(remove, 'remove'),
+        [compareComponentFunc]: logCall(compare, 'compare'),
+        [commitLifecycleEventFunc]: logCall(commitLifecycleEvent, 'commitLifecyleEvent'),
+        [dataDidChangeFunc]: logCall(dataDidChange, 'dataDidChange'),
+        [setDataFunc]: logCall(setData, 'setData'),
+        [commitUpdateFunc]: logCall(commitUpdate, 'commitUpdate'),
+        [updateFunc]: logCall(update, 'update'),
+        [mountFunc]: logCall(mount, 'mount'),
     }
 
 /**
@@ -81,7 +90,10 @@ function mount(parentElement, parentComponent) {
 function commitLifecycleEvent(args) {
     let event =  this[args[0]]
     if (event) {
-        return event.apply(this, args.slice(1)) || true
+        let out = event.apply(this, args.slice(1))
+        if (!isUndefined(out)) {
+            return out
+        }
     }
     return true
 }

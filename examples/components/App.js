@@ -122,9 +122,6 @@ class App extends Component {
     }
   }
 
-  onDataUpdated(previousData, newData) {
-    console.log('onDataUpdated')
-  }
 
   /**
    * The content function should be re-runable, and when it is re-run via "reload()",it needs to be intelligent
