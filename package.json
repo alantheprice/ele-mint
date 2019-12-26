@@ -1,6 +1,6 @@
 {
   "name": "ele-mint",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "Library to simplify dom creation into a set of simple, callable functions with flexible component extensibility",
   "main": "dist/eleMint.min.js",
   "devDependencies": {
