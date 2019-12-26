@@ -1,5 +1,5 @@
 import compare from './compare';
-import { error, keys, assign, isString, isArray, isClass } from './utils';
+import { error, keys, assign, isString, isArray, isClass, isUndefined } from './utils';
 import attach from './attach';
 import update from './update';
 import addEventListener from './addEventListener';
@@ -177,4 +177,4 @@ export const registerComponent = (comp, intData, overrideFunctions) => {
     })
 }
 
-window.handles = handles
+window.eleMint = {handles, config}

@@ -99,7 +99,7 @@ class App extends Component {
   constructor(data) {
     super(data, {
       titleText: "",
-      showNotes: true
+      showNotes: false
     })
   }
 
