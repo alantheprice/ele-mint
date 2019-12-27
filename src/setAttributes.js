@@ -12,8 +12,10 @@ const DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|s
  * @param {string} attributeName 
  * @param {any} value 
  */
- function setAttribute(elem, attributeName, value) {
+ function setAttribute(elem, attributeName, value, context) {
     if (attributeName === children) { return }
+    // Handle references to the underlying element.
+    if (attributeName === 'ref') { value(elem, context) }
     let mKey = MAPPED_ATTRIBUTES[attributeName] || attributeName
     if (DIRECT_SET_ATTRIBUTES[mKey] || isBool(value)) {
         elem[mKey] = value
@@ -35,6 +37,6 @@ export default function setAttributes() {
             this[subscribedEvents].push(this[addEventListenerFunc](attr.slice(2), value))
             return
         }
-        setAttribute(this[element], attr, value)
+        setAttribute(this[element], attr, value, this)
     })
 }

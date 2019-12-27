@@ -13,27 +13,27 @@ export default function renderChildren(parentElement, parentComponent) {
         .map((child, index) => {
             // TODO: eventually we should make this more intelligent than just looking at the index
             let current = getExisting(index)
-            if (current) {
-                let { reusable, identical } = current[compareComponentFunc](child)
-                if (identical) {
-                    previouslyRendered[index] = undefined
-                    return current
-                } else if (reusable) {
-                    previouslyRendered[index] = undefined
-                    if (current[commitLifecycleEventFunc]([
-                        "onDataUpdated", 
-                        current[externalData], 
-                        child[externalData]
-                    ])) {
-                        current[dataDidChangeFunc](child[externalData])
-                    }
-                    return current
+            if (!current) {
+                if (!child[renderFunc]) {
+                    error('child must have render function') 
                 }
+                return child.mount(parentElement, parentComponent)
             }
-            if (!child[renderFunc]) {
-                error('child must have render function') 
+            let { reusable, identical } = current[compareComponentFunc](child)
+            if (identical && current[isVirtual]) {
+                previouslyRendered[index] = undefined
+                return current
+            } else if (reusable) {
+                previouslyRendered[index] = undefined
+                if (current[commitLifecycleEventFunc]([
+                    "onDataUpdated", 
+                    current[externalData], 
+                    child[externalData]
+                ])) {
+                    current[dataDidChangeFunc](child[externalData])
+                }
+                return current
             }
-            return child.mount(parentElement, parentComponent)
         })
     if (previouslyRendered) {
         previouslyRendered.forEach((child) => {
@@ -49,7 +49,7 @@ function runContentFunc(comp) {
     if (isFunction(comp[contentFunc])) {
         comp[data][children] = [
             comp[contentFunc](
-                comp[data], 
+                comp[data],
                 (obj) => comp[updateFunc](obj)
             )]
     }
