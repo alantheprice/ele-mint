@@ -99,6 +99,7 @@ class App extends Component {
   constructor(data) {
     super(data, {
       titleText: "",
+      notes: data.startingNotes,
       showNotes: false
     })
   }
@@ -152,7 +153,7 @@ class App extends Component {
           button(
             {
               onclick: () => update({
-                notes: []
+                titleText: ""
               })
             },
             "CLEAR"
@@ -167,8 +168,19 @@ class App extends Component {
               h3("New Note"),
               textarea({class: "margin--vertical text-area"}),
               div({class: "flx flx--space-btw"},
-                button("Save Note"),
-                button("Delete Note")
+                button({ 
+                  onclick: () => update({
+                    notes: data.notes.concat([{
+                      date: new Date().toISOString(),
+                      message: "New test"
+                    }])
+                  })
+                },"Save Note"),
+                button({ 
+                  onclick: () => update({
+                    notes: []
+                  })
+                }, "Clear all notes")
               )
             )
           )

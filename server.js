@@ -23,11 +23,12 @@ const mimeTypes = {
 };
 
 http.createServer(function (request, response) {
-    console.log(["Url:", request.url].join(" "));
+    console.log(["Url:", `'${request.url}'`].join(" "));
     console.log(__dirname);
 
+    let url  = request.url !== '/' ? request.url : "./index.html"
     // only add a dot to the current path if it is not already added.
-    var filePath = (request.url.indexOf(".") === 0) ? request.url : "." + request.url;
+    var filePath = (url.indexOf(".") === 0) ? url : "." + url;
 
     var extname = path.extname(filePath);
     var contentType = mimeTypes[extname] || "text/html";
