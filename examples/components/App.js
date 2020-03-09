@@ -99,21 +99,13 @@ class App extends Component {
   constructor(data) {
     super(data, {
       titleText: "",
+      loading: true,
       notes: data.startingNotes,
       showNotes: false
     })
-  }
-
-  /**
-   * TODO: Custom events like this should be able to be semantically correct ("onnotify", or "onNotify")
-   * Or possibly, we don't even need them if we don't need to notify up the stack at all? I want to rethink this, 
-   * but I am definitely tempted to keep them in to make it easier to do internal eventing.
-   * We should move to an "update function pattern" which handles eventing without having to explicitly call emit.
-  */
-  onNotify(notifyText) {
-    this.update({
-      titleText: notifyText
-    })
+    setTimeout(() => {
+      this.update({ loading: false })
+    }, 1000)
   }
 
   updateReducer(previousData, newData) {
@@ -132,7 +124,9 @@ class App extends Component {
    */
 
   content(data, update) {
-
+    if (data.loading) {
+      return p("loading...")
+    } 
     return (
       div({class: "page"},
         h1("Testing!"),
@@ -199,7 +193,7 @@ class App extends Component {
           data.showNotes ? data.notes.map((note) => Note({
             note: note, 
             titleText: data.titleText
-          })) : null
+          })) : div()
         ),
         styles()
       )

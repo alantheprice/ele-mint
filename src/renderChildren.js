@@ -1,4 +1,4 @@
-import { renderedChildren, data, compareComponentFunc, element, removeFunc, renderFunc, isVirtual, dataDidChangeFunc, externalData, commitLifecycleEventFunc, contentFunc, children, updateFunc } from "./nameMapping"
+import { renderedChildren, data, compareComponentFunc, element, removeFunc, renderFunc, isVirtual, dataDidChangeFunc, externalData, commitLifecycleEventFunc, contentFunc, children, updateFunc, setAttributeFunc } from "./nameMapping"
 import { error, isFunction } from "./utils"
 
 
@@ -11,12 +11,12 @@ export default function renderChildren(parentElement, parentComponent) {
     let children = this[data].children
         .filter(child => child != null)
         .map((child, index) => {
+            if (!child[renderFunc]) {
+                error('child must have render function') 
+            }
             // TODO: eventually we should make this more intelligent than just looking at the index
             let current = getExisting(index)
             if (!current) {
-                if (!child[renderFunc]) {
-                    error('child must have render function') 
-                }
                 return child.mount(parentElement, parentComponent)
             }
             let { reusable, identical } = current[compareComponentFunc](child)
@@ -33,6 +33,8 @@ export default function renderChildren(parentElement, parentComponent) {
                     current[dataDidChangeFunc](child[externalData])
                 }
                 return current
+            } else {
+                return child.mount(parentElement, parentComponent)
             }
         })
     if (previouslyRendered) {

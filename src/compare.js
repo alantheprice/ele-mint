@@ -103,6 +103,6 @@ export default function compareComponent(comp) {
     
     return {
         identical: keys(this.data).reduce((match, key) => match && comparison(key), true),
-        reusable: this[tagName] ? comparison(tagName) : compareObj(this[registeredType], comp[registeredType])
+        reusable: this[tagName] ? compare(this, comp)(tagName) : compareObj(this[registeredType], comp[registeredType])
     }
 }
