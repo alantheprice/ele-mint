@@ -15,7 +15,7 @@ const DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|s
  function setAttribute(elem, attributeName, value, context) {
     if (attributeName === children) { return }
     // Handle references to the underlying element.
-    if (attributeName === 'ref') { value(elem, context) }
+    if (attributeName === 'ref') { return value(elem, context) }
     let mKey = MAPPED_ATTRIBUTES[attributeName] || attributeName
     if (DIRECT_SET_ATTRIBUTES[mKey] || isBool(value)) {
         elem[mKey] = value
