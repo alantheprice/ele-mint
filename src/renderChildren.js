@@ -1,14 +1,16 @@
-import { renderedChildren, data, compareComponentFunc, element, removeFunc, renderFunc, isVirtual, dataDidChangeFunc, externalData, commitLifecycleEventFunc, contentFunc, children, updateFunc, setAttributeFunc } from "./nameMapping"
+import { renderedChildren, data, compareComponentFunc, removeFunc, renderFunc, isVirtual, dataDidChangeFunc, externalData, commitLifecycleEventFunc, contentFunc, children, updateFunc } from "./nameMapping"
 import { error, isFunction } from "./utils"
 
 
 export default function renderChildren(parentElement, parentComponent) {
-    runContentFunc(this)
+    if (isFunction(this[contentFunc])) {
+        this[data][children] = [this[contentFunc](this[data], (obj) => this[updateFunc](obj))];
+    }
     let previouslyRendered = this[renderedChildren]
     let getExisting = (index) =>  previouslyRendered ? previouslyRendered[index] : null
     // The additional thing we need to consider if allowing a child to keep their state values 
     // rather than just overriding them..., but maybe that doesn't make sense.
-    let children = this[data].children
+    let childs = this[data].children
         .filter(child => child != null)
         .map((child, index) => {
             if (!child[renderFunc]) {
@@ -44,16 +46,5 @@ export default function renderChildren(parentElement, parentComponent) {
             }
         })
     }
-    return children
-}
-
-function runContentFunc(comp) {
-    if (isFunction(comp[contentFunc])) {
-        comp[data][children] = [
-            comp[contentFunc](
-                comp[data],
-                (obj) => comp[updateFunc](obj)
-            )]
-    }
-    return comp
+    return childs
 }

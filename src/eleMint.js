@@ -133,7 +133,6 @@ const internalRegister = (config) => {
     const rType = Symbol('rt')
 
     const construct = (...attributes) => {
-        // TODO: Since attributes is an array, we could reduce our way to success.
         let attr = attributes[0] || {}
         let childs = attributes.slice(1)
         if (isArray (attributes[0])) {
@@ -156,7 +155,7 @@ const internalRegister = (config) => {
         if (isString(config[tagName])) {
             return createElementComponent(data, config[tagName], config[overrides])
         }
-        if (isClass(config[component])) {
+        if (config[component].prototype instanceof Component) {
             return new config[component](data, config[internalData])
         }
         return createComponent(data, config[internalData], assign({}, config[overrides], {content: config[component]}))
