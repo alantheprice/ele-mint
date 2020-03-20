@@ -10,7 +10,7 @@ export default function renderChildren(parentElement, parentComponent) {
     let getExisting = (index) =>  previouslyRendered ? previouslyRendered[index] : null
     // The additional thing we need to consider if allowing a child to keep their state values 
     // rather than just overriding them..., but maybe that doesn't make sense.
-    let childs = this[data].children
+    let childs = this[data][children]
         .filter(child => child != null)
         .map((child, index) => {
             if (!child[renderFunc]) {
