@@ -103,7 +103,7 @@ export default function compareComponent(comp) {
 
     // console.log("compareItems:", this.data, comp.data)
     const comparison = compare(this.data, comp.data)
-
+    // TODO: Children are contained within data, do we want to exclude them for comparisons?
     return {
         identical: keys(this.data).reduce((match, key) => match && comparison(key), true),
         reusable: this[tagName] ? compare(this, comp)(tagName) : compareObj(this[registeredType], comp[registeredType])
