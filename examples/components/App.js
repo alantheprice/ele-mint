@@ -14,24 +14,30 @@ const div = register('div'),
 const noteFunc = (data, update) => {
   return Card(
     div({
-      onclick: () => update({test: "worked", titleText: 'Bam!'})
+      onclick: () => update({ test: "worked", titleText: 'Bam!' })
     },
       h5(data.note.date),
       p(data.test)
     ),
-    p({class: "padding--vertical"},
+    p({ class: "padding--vertical" },
       data.note.message
     ),
+    data.children
   )
 }
 
 // TODO: add state as second param
-const Note = registerComponent(noteFunc, {test:"1234"}, {
+const Note = registerComponent(noteFunc, { test: "1234" }, {
   onDataUpdated: (oldData, newData) => {
-  console.log("dataUpdated, Old:", oldData)
-  console.log("dataUpdated, New:", newData)
-},
-  onAttach: () => {
+    console.log("dataUpdated, Old:", oldData)
+    console.log("dataUpdated, New:", newData)
+  },
+  onAttach: function () {
+    // setTimeout(() => {
+    //   this.update({
+    //     test: "1234566"
+    //   })
+    // }, 1000)
     console.log("We attached!")
   }
 })
@@ -126,13 +132,13 @@ class App extends Component {
   content(data, update) {
     if (data.loading) {
       return p("loading...")
-    } 
+    }
     return (
-      div({class: "page"},
+      div({ class: "page" },
         h1("Testing!"),
-        div({class: "test"}, data.titleText),
+        div({ class: "test" }, data.titleText),
         Card(
-            p("a bunch of rando contents that could easily be written out with better clarity.")
+          p("a bunch of rando contents that could easily be written out with better clarity.")
         ),
         Card(
           textarea({
@@ -160,17 +166,17 @@ class App extends Component {
           Card(
             Card(
               h3("New Note"),
-              textarea({class: "margin--vertical text-area"}),
-              div({class: "flx flx--space-btw"},
-                button({ 
+              textarea({ class: "margin--vertical text-area" }),
+              div({ class: "flx flx--space-btw" },
+                button({
                   onclick: () => update({
                     notes: data.notes.concat([{
                       date: new Date().toISOString(),
                       message: "New test"
                     }])
                   })
-                },"Save Note"),
-                button({ 
+                }, "Save Note"),
+                button({
                   onclick: () => update({
                     notes: []
                   })
@@ -191,9 +197,9 @@ class App extends Component {
         ),
         div(
           data.showNotes ? data.notes.map((note) => Note({
-            note: note, 
+            note: note,
             titleText: data.titleText
-          })) : div()
+          }, div("test"))) : div()
         ),
         styles()
       )

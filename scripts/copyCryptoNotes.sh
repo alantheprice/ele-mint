@@ -1,2 +1,2 @@
-cp -r ./src ../CryptoNotes/node_modules/ele-mint/
-cp -r ./dist ../CryptoNotes/node_modules/ele-mint/
+cp -r ./src ../notes/node_modules/ele-mint/
+cp -r ./dist ../notes/node_modules/ele-mint/

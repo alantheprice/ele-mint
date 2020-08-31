@@ -16,5 +16,5 @@ export default function setupRemove(handles) {
         this[element] = null
         this[parentComponent] = null
         this[parentElement] = null
-}
+    }
 }
