@@ -1,5 +1,5 @@
 import compare from './compare';
-import { error, keys, assign, isString, isArray, isUndefined } from './utils';
+import { error, keys, assign, isString, isArray, isUndefined, isObject } from './utils';
 import attach from './attach';
 import update from './update';
 import addEventListener from './addEventListener';
@@ -19,7 +19,6 @@ const logCall = function (func, name) {
         return func.apply(this, args)
     }
 }
-
 
 const prototypeFuncs = {
     [attachFunc]: logCall(attach, 'attach'),
@@ -101,6 +100,15 @@ function commitLifecycleEvent(args) {
 
 function dataDidChange(newData) {
     this[setDataFunc](this[internalData], newData)
+    const dataOverride = this[commitLifecycleEventFunc]([
+        "onDataChange",
+        this[data],
+        newData
+    ])
+    if (isObject(dataOverride)) {
+        console.log('data is dataOverride', dataOverride)
+        this[data] = dataOverride
+    }
     this[setAttributeFunc]()
     this[commitUpdateFunc](this)
 }

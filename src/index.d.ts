@@ -23,8 +23,10 @@ export class Component<T, R> {
 
   updateReducer(previousData: T & R, newData: T & R): T & R;
 
+  onDataChange?: (current: T & R, updated: T & R) => T & R;
+
   content(
-    data: ComponentData<T>,
+    data: ComponentData<T & R>,
     update: (newData: ComponentData<T>) => void
   ): ComponentFunction<T, R>;
 }
@@ -48,11 +50,13 @@ export interface ComponentOverrides<T, R> {
 
   dataDidChange?: (current: T & R, updated: T & R) => boolean;
 
+  onDataChange?: (current: T & R, updated: T & R) => T & R;
+
   updateReducer?: (previousData: T & R, newData: T & R) => T & R;
 }
 
 export type ComponentFunction<T, R> = (
-  configOrChild?: ComponentData<T & R> | ComponentFunction<any, any> | string,
+  configOrChild?: ComponentData<T> | ComponentFunction<any, any> | string,
   firstChild?: ComponentFunction<any, any> | string,
   ...children: ComponentFunction<any, any>[]
 ) => ComponentFunction<T, R>;
