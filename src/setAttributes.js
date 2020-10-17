@@ -1,9 +1,9 @@
-import { element, children, isVirtual, data, subscribedEvents, addEventListenerFunc } from "./nameMapping";
+import { element, children, isVirtual, data, subscribedEvents, addEventListenerFunc, namespace } from "./nameMapping";
 import { isBool, hasPrefix, keys } from "./utils";
 
 const MAPPED_ATTRIBUTES = { class: 'className' }
 const DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|style|checked|selected|src|srcdoc|srcset|tabindex|target'.split('|')
-        .reduce((agg, next)=> { agg[next] = 1; return agg }, {})
+    .reduce((agg, next) => { agg[next] = 1; return agg }, {})
 
 /**
  * Set an attribute on the element
@@ -12,10 +12,10 @@ const DIRECT_SET_ATTRIBUTES = 'textContent|innerText|innerHTML|className|value|s
  * @param {string} attributeName 
  * @param {any} value 
  */
- function setAttribute(elem, attributeName, value, context) {
+function setAttribute(elem, attributeName, value, context) {
     if (attributeName === children) { return }
     // Handle references to the underlying element.
-    if (attributeName === 'ref') { return value(elem, context) }
+    if (attributeName === 'ref' || attributeName === namespace) { return value(elem, context) }
     let mKey = MAPPED_ATTRIBUTES[attributeName] || attributeName
     if (DIRECT_SET_ATTRIBUTES[mKey] || isBool(value)) {
         elem[mKey] = value

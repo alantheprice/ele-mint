@@ -1,20 +1,20 @@
 import compare from './compare';
-import { error, keys, assign, isString, isArray, isClass, isUndefined } from './utils';
+import { error, keys, assign, isString, isArray, isUndefined } from './utils';
 import attach from './attach';
 import update from './update';
 import addEventListener from './addEventListener';
 import render from './render';
-import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children, dataDidChangeFunc, setDataFunc, updateFunc, mountFunc, commitUpdateFunc, renderedChildren, parentElement } from './nameMapping';
+import { attachFunc, addEventListenerFunc, setAttributeFunc, renderChildrenFunc, renderFunc, removeFunc, compareComponentFunc, commitLifecycleEventFunc, externalData, internalData, isVirtual, data, tagName, handle, element, registeredType, component, overrides, children, dataDidChangeFunc, setDataFunc, updateFunc, mountFunc, commitUpdateFunc, renderedChildren, parentElement, namespace } from './nameMapping';
 import setAttribute from './setAttributes';
 import setupRemove from './remove';
 import renderChildren from './renderChildren';
 const handles = {}
 const remove = setupRemove(handles)
-const config = {debug: false}
+const config = { debug: false }
 const logCall = function (func, name) {
     return function (...args) {
         if (config.debug) {
-            console.log(`${name} called with context: `,this, "args",  args)
+            console.log(`${name} called with context: `, this, "args", args)
         }
         return func.apply(this, args)
     }
@@ -22,20 +22,20 @@ const logCall = function (func, name) {
 
 
 const prototypeFuncs = {
-        [attachFunc]: logCall(attach, 'attach'),
-        [addEventListenerFunc]: logCall(addEventListener, 'addEventListener'),
-        [setAttributeFunc]: logCall(setAttribute, 'setAttribute'),
-        [renderChildrenFunc]: logCall(renderChildren, 'renderChildren'),
-        [renderFunc]: logCall(render, 'render'),
-        [removeFunc]: logCall(remove, 'remove'),
-        [compareComponentFunc]: logCall(compare, 'compare'),
-        [commitLifecycleEventFunc]: logCall(commitLifecycleEvent, 'commitLifecyleEvent'),
-        [dataDidChangeFunc]: logCall(dataDidChange, 'dataDidChange'),
-        [setDataFunc]: logCall(setData, 'setData'),
-        [commitUpdateFunc]: logCall(commitUpdate, 'commitUpdate'),
-        [updateFunc]: logCall(update, 'update'),
-        [mountFunc]: logCall(mount, 'mount'),
-    }
+    [attachFunc]: logCall(attach, 'attach'),
+    [addEventListenerFunc]: logCall(addEventListener, 'addEventListener'),
+    [setAttributeFunc]: logCall(setAttribute, 'setAttribute'),
+    [renderChildrenFunc]: logCall(renderChildren, 'renderChildren'),
+    [renderFunc]: logCall(render, 'render'),
+    [removeFunc]: logCall(remove, 'remove'),
+    [compareComponentFunc]: logCall(compare, 'compare'),
+    [commitLifecycleEventFunc]: logCall(commitLifecycleEvent, 'commitLifecyleEvent'),
+    [dataDidChangeFunc]: logCall(dataDidChange, 'dataDidChange'),
+    [setDataFunc]: logCall(setData, 'setData'),
+    [commitUpdateFunc]: logCall(commitUpdate, 'commitUpdate'),
+    [updateFunc]: logCall(update, 'update'),
+    [mountFunc]: logCall(mount, 'mount'),
+}
 
 /**
  * Base Class/Prototype to extend for class usage
@@ -57,7 +57,7 @@ const prototypeFuncs = {
  *
  * @param {*} data
  */
-export const Component = function(passedInData, initialData) {
+export const Component = function (passedInData, initialData) {
     this[setDataFunc](initialData, passedInData)
     this[isVirtual] = true
 }
@@ -79,7 +79,7 @@ keys(prototypeFuncs).forEach((key) => Component.prototype[key] = prototypeFuncs[
 
 
 function mount(parentElement, parentComponent) {
-    let c = this[renderFunc](parentElement, parentComponent) 
+    let c = this[renderFunc](parentElement, parentComponent)
     this[handle] = this[handle] || this[data].id || Symbol(c[tagName] || 'v')
     if (c[element]) {
         c[element][removeFunc] = c[removeFunc]
@@ -89,7 +89,7 @@ function mount(parentElement, parentComponent) {
 }
 
 function commitLifecycleEvent(args) {
-    let event =  this[args[0]]
+    let event = this[args[0]]
     if (event) {
         let out = event.apply(this, args.slice(1))
         if (!isUndefined(out)) {
@@ -135,12 +135,12 @@ const internalRegister = (config) => {
     const construct = (...attributes) => {
         let attr = attributes[0] || {}
         let childs = attributes.slice(1)
-        if (isArray (attributes[0])) {
+        if (isArray(attributes[0])) {
             childs = attributes[0]
             attr = {}
         } else if (isString(attributes[0])) {
-            attr = {textContent: attributes[0]}
-        } else if ((attributes[0]||{})[renderFunc]) {
+            attr = { textContent: attributes[0] }
+        } else if ((attributes[0] || {})[renderFunc]) {
             childs.unshift(attributes[0])
             attr = {}
         }
@@ -151,14 +151,14 @@ const internalRegister = (config) => {
         if (isArray(childs[0])) {
             childs = childs[0]
         }
-        const data =  assign({}, attr, {[children]: childs})
+        const data = assign({}, attr, { [children]: childs })
         if (isString(config[tagName])) {
             return createElementComponent(data, config[tagName], config[overrides])
         }
         if (config[component].prototype instanceof Component) {
             return new config[component](data, config[internalData])
         }
-        return createComponent(data, config[internalData], assign({}, config[overrides], {content: config[component]}))
+        return createComponent(data, config[internalData], assign({}, config[overrides], { content: config[component] }))
     }
 
     /**
@@ -176,17 +176,25 @@ const internalRegister = (config) => {
 
 export const register = (tag, overrideFunctions) => {
     return internalRegister({
-        [tagName]: tag, 
+        [tagName]: tag,
         [overrides]: overrideFunctions
+    })
+}
+
+
+export const registerSVG = (tag) => {
+    return internalRegister({
+        [tagName]: tag,
+        [overrides]: { [namespace]: "http://www.w3.org/2000/svg" }
     })
 }
 
 export const registerComponent = (comp, intData, overrideFunctions) => {
     return internalRegister({
-        [component]: comp, 
-        [internalData]: intData, 
+        [component]: comp,
+        [internalData]: intData,
         [overrides]: overrideFunctions
     })
 }
 
-window.eleMint = {handles, config}
+window.eleMint = { handles, config }

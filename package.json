@@ -1,8 +1,11 @@
 {
   "name": "ele-mint",
-  "version": "2.1.14",
+  "version": "2.1.16-test4",
   "description": "Library to simplify dom creation into a set of simple, callable functions with flexible component extensibility",
   "main": "dist/eleMint.min.js",
+  "module": "dist/eleMint.module.min.js",
+  "umd:main": "dist/eleMint.umd.min.js",
+  "types": "dist/index.d.ts",
   "devDependencies": {
     "@babel/core": "^7.6.0",
     "@babel/preset-env": "^7.0.0-beta.41",
@@ -13,6 +16,7 @@
     "es6-import": "^1.6.3",
     "eslint": "^4.18.1",
     "eslint-loader": "^1.9.0",
+    "jasmine": "^3.1.0",
     "karma": "^5.1.1",
     "karma-babel-preprocessor": "^8.0.0-beta.0",
     "karma-chrome-launcher": "^2.2.0",
@@ -20,6 +24,7 @@
     "karma-mocha": "^2.0.1",
     "karma-sourcemap-loader": "^0.3.7",
     "karma-webpack": "^2.0.13",
+    "microbundle": "^0.12.3",
     "mocha": "^8.1.3",
     "webpack": "^4.40.2",
     "webpack-cli": "^3.3.9"
@@ -29,7 +34,7 @@
     "prepublishOnly": "sh ./scripts/prepublish.sh",
     "start": "node server.js",
     "localTesting": "sh ./scripts/copyCryptoNotes.sh",
-    "build": "webpack"
+    "build": "microbundle && cp ./src/index.d.ts ./dist/index.d.ts"
   },
   "keywords": [
     "DOM",
@@ -46,8 +51,5 @@
   "bugs": {
     "url": "https://github.com/alantheprice/ele-mint/issues"
   },
-  "homepage": "https://github.com/alantheprice/ele-mint#readme",
-  "dependencies": {
-    "jasmine": "^3.1.0"
-  }
+  "homepage": "https://github.com/alantheprice/ele-mint#readme"
 }

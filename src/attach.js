@@ -1,4 +1,4 @@
-import { parentElement, tagName, element } from "./nameMapping"
+import { parentElement, tagName, element, namespace, data } from "./nameMapping"
 
 /**
  * Attaches the element to the Dom.
@@ -12,7 +12,7 @@ export default function attach(parentElem) {
     // if a virtual element, tagName is not defined, thus, element should pass through
     let elem = this[tagName] ? this[element] : this[parentElement]
     if (!elem) {
-        elem = document.createElement(this[tagName])
+        elem = document.createElementNS(this[namespace] || "http://www.w3.org/1999/xhtml", this[tagName])
         parentElem.appendChild(elem)
     }
     return elem

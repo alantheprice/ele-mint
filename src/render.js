@@ -12,13 +12,13 @@ export default function render(parentElement, parentComp) {
     this[parentComponent] = parentComp
     this[element] = this[isVirtual] ? null : elem
     const arr = [
-        this[element], 
-        this[data], 
-        obj => this[updateFunc](obj), 
+        this[element],
+        this[data],
+        obj => this[updateFunc](obj),
         this]
     this[commitLifecycleEventFunc](["onAttach"].concat(arr))
     this[renderedChildren] = this[renderChildrenFunc](
-        elem, 
+        elem,
         this[isVirtual] ? this : parentComp
     )
     this[setAttributeFunc]()
