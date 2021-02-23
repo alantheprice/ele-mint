@@ -1,65 +1,76 @@
-import { register, registerComponent, Component, registerSVG } from '../../src/eleMint'
-import Card from './Card';
-const div = register('div'),
-  button = register('button'),
-  p = register('p'),
-  h3 = register('h3'),
-  h5 = register('h5'),
-  hr = register('hr'),
-  h1 = register('h1'),
-  input = register('input'),
-  textarea = register('textarea'),
+import {
+  register,
+  registerComponent,
+  Component,
+  registerSVG,
+} from "../../src/index.js";
+import Card from "./Card";
+const div = register("div"),
+  button = register("button"),
+  p = register("p"),
+  h3 = register("h3"),
+  h5 = register("h5"),
+  hr = register("hr"),
+  h1 = register("h1"),
+  input = register("input"),
+  textarea = register("textarea"),
   style = register("style"),
   svg = registerSVG("svg"),
-  path = registerSVG("path")
+  path = registerSVG("path");
 
 const SVG = () => {
-  return (
-    svg({
+  return svg(
+    {
       xmlns: "http://www.w3.org/2000/svg",
       width: "24",
       height: "24",
       viewBox: "0 0 24 24",
     },
 
-      path({ d: "M0 0h24v24H0V0z", fill: "none" }),
-      path({ d: "M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-2h2v-4h4v-2h-4V7h-2v4H7v2h4z" }),
-    )
-  )
-}
+    path({ d: "M0 0h24v24H0V0z", fill: "none" }),
+    path({
+      d:
+        "M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-2h2v-4h4v-2h-4V7h-2v4H7v2h4z",
+    })
+  );
+};
 
 const noteFunc = (data, update) => {
   return Card(
-    div({
-      onclick: () => update({ test: "worked", titleText: 'Bam!' })
-    },
+    div(
+      {
+        onclick: () => update({ test: "worked", titleText: "Bam!" }),
+      },
       h5(data.note.date),
       p(data.test)
     ),
-    p({ class: "padding--vertical" },
-      data.note.message
-    ),
+    p({ class: "padding--vertical" }, data.note.message),
     data.children
-  )
-}
+  );
+};
 
 // TODO: add state as second param
-const Note = registerComponent(noteFunc, { test: "1234" }, {
-  onDataUpdated: (oldData, newData) => {
-    console.log("dataUpdated, Old:", oldData)
-    console.log("dataUpdated, New:", newData)
-  },
-  onAttach: function () {
-    // setTimeout(() => {
-    //   this.update({
-    //     test: "1234566"
-    //   })
-    // }, 1000)
-    console.log("We attached!")
+const Note = registerComponent(
+  noteFunc,
+  { test: "1234" },
+  {
+    onDataUpdated: (oldData, newData) => {
+      console.log("dataUpdated, Old:", oldData);
+      console.log("dataUpdated, New:", newData);
+    },
+    onAttach: function () {
+      // setTimeout(() => {
+      //   this.update({
+      //     test: "1234566"
+      //   })
+      // }, 1000)
+      console.log("We attached!");
+    },
   }
-})
+);
 
-const styles = () => style(`
+const styles = () =>
+  style(`
   :root {
     --padding: 10px;
   }
@@ -116,7 +127,7 @@ const styles = () => style(`
     width: 100%;
     margin-bottom: 20px;
   }
-`)
+`);
 
 class App extends Component {
   constructor(data) {
@@ -124,105 +135,123 @@ class App extends Component {
       titleText: "",
       loading: true,
       notes: data.startingNotes,
-      showNotes: false
-    })
+      showNotes: false,
+    });
     setTimeout(() => {
-      this.update({ loading: false })
-    }, 1000)
+      this.update({ loading: false });
+    }, 1000);
   }
 
   updateReducer(previousData, newData) {
     return {
       ...previousData,
-      ...newData
-    }
+      ...newData,
+    };
   }
-
 
   /**
    * The content function should be re-runable, and when it is re-run via "reload()",it needs to be intelligent
-   * For initial testing and prototyping, we can have it reload in simple state by just re-adding all elements, 
-   * but eventually it should loop through children and allow the child to control whether it needs to recreate, 
+   * For initial testing and prototyping, we can have it reload in simple state by just re-adding all elements,
+   * but eventually it should loop through children and allow the child to control whether it needs to recreate,
    * or just update.
    */
 
   content(data, update) {
     if (data.loading) {
-      return p("loading...")
+      return p("loading...");
     }
-    return (
-      div({ class: "page" },
-        SVG(),
-        h1("Testing!"),
-        div({ class: "test" }, data.titleText),
-        Card(
-          p("a bunch of rando contents that could easily be written out with better clarity.")
-        ),
-        Card(
-          textarea({
-            placeholder: "enter something here.",
-            oninput: (ev, elem, context) => {
+    return div(
+      { class: "page" },
+      SVG(),
+      h1("Testing!"),
+      div({ class: "test" }, data.titleText),
+      Card(
+        p(
+          "a bunch of rando contents that could easily be written out with better clarity."
+        )
+      ),
+      Card(
+        textarea({
+          placeholder: "enter something here.",
+          oninput: (ev, elem, context) => {
+            update({
+              titleText: elem.value,
+            });
+          },
+          value: data.titleText,
+        }),
+        button(
+          {
+            onclick: () =>
               update({
-                titleText: elem.value
-              })
-            },
-            value: data.titleText
-          }),
-          button(
-            {
-              onclick: () => update({
-                titleText: ""
-              })
-            },
-            "CLEAR"
-          ),
-          h3(
-            data.titleText
-          ),
+                titleText: "",
+              }),
+          },
+          "CLEAR"
         ),
+        h3(data.titleText)
+      ),
+      Card(
         Card(
           Card(
-            Card(
-              h3("New Note"),
-              textarea({ class: "margin--vertical text-area" }),
-              div({ class: "flx flx--space-btw" },
-                button({
-                  onclick: () => update({
-                    notes: data.notes.concat([{
-                      date: new Date().toISOString(),
-                      message: "New test"
-                    }])
-                  })
-                }, "Save Note"),
-                button({
-                  onclick: () => update({
-                    notes: []
-                  })
-                }, "Clear all notes")
+            h3("New Note"),
+            textarea({ class: "margin--vertical text-area" }),
+            div(
+              { class: "flx flx--space-btw" },
+              button(
+                {
+                  onclick: () =>
+                    update({
+                      notes: data.notes.concat([
+                        {
+                          date: new Date().toISOString(),
+                          message: "New test",
+                        },
+                      ]),
+                    }),
+                },
+                "Save Note"
+              ),
+              button(
+                {
+                  onclick: () =>
+                    update({
+                      notes: [],
+                    }),
+                },
+                "Clear all notes"
               )
             )
           )
-        ),
-        h3("Notes"),
-        button(
-          {
-            name: "Button",
-            onclick: () => update({
-              showNotes: !data.showNotes
-            })
-          },
-          data.showNotes ? "HIDE NOTES" : "SHOW NOTES"
-        ),
-        div(
-          data.showNotes ? data.notes.map((note) => Note({
-            note: note,
-            titleText: data.titleText
-          }, div("test"))) : div()
-        ),
-        styles()
-      )
-    )
+        )
+      ),
+      h3("Notes"),
+      button(
+        {
+          name: "Button",
+          onclick: () =>
+            update({
+              showNotes: !data.showNotes,
+            }),
+        },
+        data.showNotes ? "HIDE NOTES" : "SHOW NOTES"
+      ),
+      div(
+        data.showNotes
+          ? data.notes.map((note) =>
+              Note(
+                {
+                  note: note,
+                  titleText: data.titleText,
+                },
+                div("test")
+              )
+            )
+          : div()
+      ),
+      styles()
+    );
   }
 }
 
-export default registerComponent(App)
+export default registerComponent(App);
